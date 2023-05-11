@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Canvas with Balls and Slider</title>
+    <style>
+        canvas {
+            background-image: url("field.png");
+            background-size: cover;
+        }
+        button {
+            margin: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+        }
+        #red {
+            background-color: red;
+        }
+        #blue {
+            background-color: blue;
+        }
+        #slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+   <canvas id="myCanvas" width="1140" height="600"></canvas>
+<div>
+	<button id="red" onclick="addCircle('red')">Red Ball</button>
+	<button id="blue" onclick="addCircle('blue')">Blue Ball</button>
+	<input type="number" min="10" max="150" value="25" id="radiusInput" oninput="updateRadiusValue()">Circle Radius
+   <input type="checkbox" id="drawCheckbox" name="Draw">Draw
+
+    
+</div>
+
+<script>
+	 var canvas = document.getElementById("myCanvas");
+	 var circles = [];
+	 var radiusInput = document.getElementById("radiusInput");
+	 var radiusValue = document.getElementById("radiusValue");
+    var canvas = document.getElementById("myCanvas");
+    var ctx = canvas.getContext("2d");
+    var isDrawing = false;
+	function addCircle(color) {
+		var x = Math.floor(Math.random() * canvas.width);
+		var y = Math.floor(Math.random() * canvas.height);
+		var radius = Number(radiusInput.value);
+		var circle = { x: x, y: y, radius: radius, color: color };
+		circles.push(circle);
+		drawCircles();
+	}
+
+	function drawCircles() {
+		var ctx = canvas.getContext("2d");
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		for (var i = 0; i < circles.length; i++) {
+			var circle = circles[i];
+			ctx.beginPath();
+			ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+			ctx.fillStyle = circle.color;
+			ctx.fill();
+		}
+	}
+
+	function removeCircle(event) {
+		var rect = canvas.getBoundingClientRect();
+		var mouseX = event.clientX - rect.left;
+		var mouseY = event.clientY - rect.top;
+		for (var i = 0; i < circles.length; i++) {
+			var circle = circles[i];
+			var distance = Math.sqrt(Math.pow(mouseX - circle.x, 2) + Math.pow(mouseY - circle.y, 2));
+			if (distance <= circle.radius) {
+				circles.splice(i, 1);
+				drawCircles();
+				break;
+			}
+		}
+	}
+
+	canvas.addEventListener("contextmenu", function(event) {
+		event.preventDefault();
+		removeCircle(event);
+	});
+
+	drawCircles();
+
+	// New code starts here
+	var selectedCircle = null;
+
+	function selectCircle(event) {
+		var rect = canvas.getBoundingClientRect();
+		var mouseX = event.clientX - rect.left;
+		var mouseY = event.clientY - rect.top;
+		for (var i = 0; i < circles.length; i++) {
+			var circle = circles[i];
+			var distance = Math.sqrt(Math.pow(mouseX - circle.x, 2) + Math.pow(mouseY - circle.y, 2));
+			if (distance <= circle.radius) {
+				selectedCircle = circle;
+				break;
+			}
+		}
+	}
+
+	function moveCircle(event) {
+		if (selectedCircle) {
+			var rect = canvas.getBoundingClientRect();
+			selectedCircle.x = event.clientX - rect.left;
+			selectedCircle.y = event.clientY - rect.top;
+			drawCircles();
+		}
+	}
+
+	canvas.addEventListener("mousedown", function(event) {
+		if (event.button === 0) {
+			selectCircle(event);
+if(document.getElementById("drawCheckbox").checked)
+ isDrawing = true;
+    ctx.beginPath();
+    ctx.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+		}
+	});
+
+	canvas.addEventListener("mousemove", function(event) {
+  moveCircle(event);
+  if (isDrawing) {
+    ctx.lineTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+    ctx.stroke();
+  }
+});
+
+canvas.addEventListener("mouseup", function(event) {
+  selectedCircle = null;
+  isDrawing = false;
+});
+</script>
+Made By Bambi
