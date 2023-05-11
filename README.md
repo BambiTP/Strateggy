@@ -1,8 +1,7 @@
 # Strateggy
 Controls 
-Right click to erace
+Right click to erase
 
-ToDo 
+To-Do 
 Add Arrows
-Add Pencil Eraser And color chooser
-Add Egg
+Add Pencil, Eraser, And Color Chooser
