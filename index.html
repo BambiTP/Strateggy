@@ -19,11 +19,11 @@
         }
         #blue {
             background-color: blue;
+        }  
+		  #gold {
+            background-color: gold;
         }
-        #slider {
-            width: 100%;
-            margin: 10px 0;
-        }
+  
     </style>
 </head>
 <body>
@@ -32,6 +32,7 @@
 <div>
 	<button id="red" onclick="addCircle('red')">Red Ball</button>
 	<button id="blue" onclick="addCircle('blue')">Blue Ball</button>
+	<button id="gold" onclick="addCircle('yellow')">Egg</button>
 	<input type="number" min="10" max="150" value="25" id="radiusInput" oninput="updateRadiusValue()">Circle Radius
    <input type="checkbox" id="drawCheckbox" name="Draw">Draw
 
@@ -123,7 +124,7 @@ if(document.getElementById("drawCheckbox").checked)
     ctx.beginPath();
     ctx.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
 		}
-	});                                                                                                                                           Zoom Out if drawing is weird
+	});
 
 	canvas.addEventListener("mousemove", function(event) {
   moveCircle(event);
@@ -138,4 +139,4 @@ canvas.addEventListener("mouseup", function(event) {
   isDrawing = false;
 });
 </script>
-Made By Bambi                   (If drawing is weird zoom out)
+Made By Bambi
