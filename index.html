@@ -17,126 +17,216 @@
         #red {
             background-color: red;
         }
+        #maroon {
+            background-color: maroon;
+        }
         #blue {
             background-color: blue;
         }  
-		  #gold {
+        #gold {
             background-color: gold;
         }
-  
+        #black {
+            background-color: black;
+        }
+        #bluepath {
+            background-color: blue;
+        }
+        #redpath {
+            background-color: red;
+        }
+        #blackpath {
+            background-color: black;
+		  }
+		   #fullfield {
+            background-color: orange;
+        }
+		   #halffield {
+            background-color: orange;
+		  }  
     </style>
 </head>
 <body>
+    <canvas id="myCanvas" width="1140" height="600"></canvas>
+    <div>
+        <button id="maroon" onclick="clearCanvas()">Clear All</button>
+        <button id="maroon" onclick="clearPaths()">Clear Drawings</button>
+        <button id="red" onclick="addCircle('red')">Red Ball</button>
+        <button id="blue" onclick="addCircle('blue')">Blue Ball</button>
+        <button id="gold" onclick="addCircle('gold')">Egg</button>
+        <input type="number" min="10" max="150" value="25" id="radiusInput" oninput="updateRadiusValue()">Radius</input>
+        <input type="checkbox" id="drawCheckbox" name="Draw"> </input>Draw  
+        <input type="color" id="colorInput" value="#000000" onchange="updatePathColor()">Color</input>
+        <button id="redpath" onclick="updatePathColor('red')">Red</button>
+        <button id="bluepath" onclick="updatePathColor('blue')">Blue</button>
+        <button id="blackpath" onclick="updatePathColor('black')">Black</button>
+        Size: <input type="number" min="1" max="10" value="2" id="sizeInput" 
+oninput="updatePathSize()"></input>
+<button id="fullfield" onclick="fullField()">Full Field</button>
+<button id="halffield" onclick="halfField()">Half Field</button>
+    </div>
 
-   <canvas id="myCanvas" width="1140" height="600"></canvas>
-<div>
-	<button id="red" onclick="addCircle('red')">Red Ball</button>
-	<button id="blue" onclick="addCircle('blue')">Blue Ball</button>
-	<button id="gold" onclick="addCircle('yellow')">Egg</button>
-	<input type="number" min="10" max="150" value="25" id="radiusInput" oninput="updateRadiusValue()">Circle Radius
-   <input type="checkbox" id="drawCheckbox" name="Draw">Draw
+    <script>
+        var pathSize = 2; // Default path size
+        var pathColor = "black"; // Default path color
+        var canvas = document.getElementById("myCanvas");
+        var circles = [];
+        var paths = []; // Array to store the paths of freehand drawings
+        var radiusInput = document.getElementById("radiusInput");
+        var ctx = canvas.getContext("2d");
+        var isDrawing = false;
+        var selectedCircle = null;
 
-    
-</div>
+        function addCircle(color) {
+            var x = Math.floor(Math.random() * canvas.width);
+            var y = Math.floor(Math.random() * canvas.height);
+            var radius = Number(radiusInput.value);
+            var circle = { x: x, y: y, radius: radius, color: color };
+            circles.push(circle);
+            drawCanvas();
+        }
 
-<script>
-	 var canvas = document.getElementById("myCanvas");
-	 var circles = [];
-	 var radiusInput = document.getElementById("radiusInput");
-	 var radiusValue = document.getElementById("radiusValue");
-    var canvas = document.getElementById("myCanvas");
-    var ctx = canvas.getContext("2d");
-    var isDrawing = false;
-	function addCircle(color) {
-		var x = Math.floor(Math.random() * canvas.width);
-		var y = Math.floor(Math.random() * canvas.height);
-		var radius = Number(radiusInput.value);
-		var circle = { x: x, y: y, radius: radius, color: color };
-		circles.push(circle);
-		drawCircles();
-	}
+        function drawCircle(circle) {
+            ctx.beginPath();
+            ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
+            ctx.fillStyle = circle.color;
+            ctx.fill();
+            ctx.closePath();
+        }
 
-	function drawCircles() {
-		var ctx = canvas.getContext("2d");
-		ctx.clearRect(0, 0, canvas.width, canvas.height);
-		for (var i = 0; i < circles.length; i++) {
-			var circle = circles[i];
-			ctx.beginPath();
-			ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-			ctx.fillStyle = circle.color;
-			ctx.fill();
-		}
-	}
+        function drawCircles() {
+            for (var i = 0; i < circles.length; i++) {
+                drawCircle(circles[i]);
+            }
+        }
 
-	function removeCircle(event) {
-		var rect = canvas.getBoundingClientRect();
-		var mouseX = event.clientX - rect.left;
-		var mouseY = event.clientY - rect.top;
-		for (var i = 0; i < circles.length; i++) {
-			var circle = circles[i];
-			var distance = Math.sqrt(Math.pow(mouseX - circle.x, 2) + Math.pow(mouseY - circle.y, 2));
-			if (distance <= circle.radius) {
-				circles.splice(i, 1);
-				drawCircles();
-				break;
+        function drawPaths() {
+            for (var i = 0; i < paths.length; i++) {
+                ctx.strokeStyle = paths[i].color; 
+                ctx.lineWidth = paths[i].size; 
+                ctx.stroke(paths[i].path);
+            }
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawCircles();
+            drawPaths();
+        }
+
+        function removeCircle(event) {
+            var rect = canvas.getBoundingClientRect();
+            var mouseX = event.clientX - rect.left;
+            var mouseY = event.clientY - rect.top;
+            for (var i = 0; i < circles.length; i++) {
+                var circle = circles[i];
+                var distance = Math.sqrt(Math.pow(mouseX - circle.x, 2) + Math.pow(mouseY - circle.y, 2));
+                if (distance <= circle.radius) {
+                    circles.splice(i, 1);
+                    drawCanvas();
+                    break;
+                }
+            }
+        }
+
+        canvas.addEventListener("contextmenu", function(event) {
+            event.preventDefault();
+            removeCircle(event);
+        });
+
+        function selectCircle(event) {
+            var rect = canvas.getBoundingClientRect();
+            var mouseX = event.clientX - rect.left;
+            var mouseY = event.clientY - rect.top;
+            for (var i = 0; i < circles.length; i++) {
+                var circle = circles[i];
+                var distance = Math.sqrt(Math.pow(mouseX - circle.x, 2) + Math.pow(mouseY - circle.y, 2));
+                if (distance <= circle.radius) {
+                    selectedCircle = circle;
+                    break;
+                }
+            }
+        }
+
+        function moveCircle(event) {
+            if (selectedCircle) {
+                var rect = canvas.getBoundingClientRect();
+                selectedCircle.x = event.clientX - rect.left;
+                selectedCircle.y = event.clientY - rect.top;
+                drawCanvas(); // redraw the canvas with the updated circle position
+            }
+        }
+
+        function getStart(event) {
+            var path = {
+                path: new Path2D(),
+                color: pathColor,
+                size: pathSize
+            };
+            path.path.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+            paths.push(path);
+        }
+
+        function drawLine(event) {
+            var lastPath = paths[paths.length - 1];
+            lastPath.path.lineTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
+            ctx.strokeStyle = lastPath.color;
+            ctx.lineWidth = lastPath.size;
+            ctx.stroke(lastPath.path);
+        }
+
+        function clearPaths() {
+            paths = []; // Empty the paths array
+            drawCanvas(); // Redraw the canvas without the paths
+        }
+
+        function clearCanvas() {
+            circles = []; // Empty the circles array
+            paths = []; // Empty the paths array
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the entire canvas
+        }
+
+        function updatePathSize() {
+            pathSize = Number(document.getElementById("sizeInput").value);
+        }
+
+        function updatePathColor(color) {
+            if (color) {
+                pathColor = color;
+            } else {
+                pathColor = document.getElementById("colorInput").value;
+            }
+        }
+			function fullField() {
+            var canvas = document.getElementById("myCanvas");
+           canvas.width = 2280;
+            canvas.height = 600;
 			}
-		}
-	}
-
-	canvas.addEventListener("contextmenu", function(event) {
-		event.preventDefault();
-		removeCircle(event);
-	});
-
-	drawCircles();
-
-	// New code starts here
-	var selectedCircle = null;
-
-	function selectCircle(event) {
-		var rect = canvas.getBoundingClientRect();
-		var mouseX = event.clientX - rect.left;
-		var mouseY = event.clientY - rect.top;
-		for (var i = 0; i < circles.length; i++) {
-			var circle = circles[i];
-			var distance = Math.sqrt(Math.pow(mouseX - circle.x, 2) + Math.pow(mouseY - circle.y, 2));
-			if (distance <= circle.radius) {
-				selectedCircle = circle;
-				break;
+		  function halfField() {
+            var canvas = document.getElementById("myCanvas");
+           canvas.width = 1140;
+            canvas.height = 600;
 			}
-		}
-	}
 
-	function moveCircle(event) {
-		if (selectedCircle) {
-			var rect = canvas.getBoundingClientRect();
-			selectedCircle.x = event.clientX - rect.left;
-			selectedCircle.y = event.clientY - rect.top;
-			drawCircles();
-		}
-	}
+        canvas.addEventListener("mousedown", function(event) {
+            if (event.button === 0) {
+                selectCircle(event);
+                if (document.getElementById("drawCheckbox").checked)
+                    isDrawing = true;
+                getStart(event);
+            }
+        });
 
-	canvas.addEventListener("mousedown", function(event) {
-		if (event.button === 0) {
-			selectCircle(event);
-if(document.getElementById("drawCheckbox").checked)
- isDrawing = true;
-    ctx.beginPath();
-    ctx.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
-		}
-	});
+        canvas.addEventListener("mousemove", function(event) {
+            moveCircle(event);
+            if (isDrawing)
+                drawLine(event);
+        });
 
-	canvas.addEventListener("mousemove", function(event) {
-  moveCircle(event);
-  if (isDrawing) {
-    ctx.lineTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
-    ctx.stroke();
-  }
-});
-
-canvas.addEventListener("mouseup", function(event) {
-  selectedCircle = null;
-  isDrawing = false;
-});
-</script>
-Made By Bambi 		Left Click To Erase
+        canvas.addEventListener("mouseup", function(event) {
+            selectedCircle = null;
+            isDrawing = false;
+        });
+    </script>
+</body>
+</html>
