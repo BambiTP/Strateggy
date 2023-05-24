@@ -7,6 +7,39 @@
             background-image: url("field.png");
             background-size: cover;
         }
+#drawCheckbox {
+        display: none; /* Hide the default checkbox */
+    }
+
+    .toggle-button {
+        background-color: #ccc;
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 25px;
+        border-radius: 25px;
+        transition: background-color 0.3s;
+    }
+
+    .toggle-button:before {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 21px;
+        height: 21px;
+        border-radius: 50%;
+        background-color: white;
+        transition: transform 0.3s;
+    }
+
+    #drawCheckbox:checked + .toggle-button {
+        background-color: #4CAF50; /* Green color when checked */
+    }
+
+    #drawCheckbox:checked + .toggle-button:before {
+        transform: translateX(25px); /* Move the button to the right when checked */
+    }
         button {
             margin: 10px;
             padding: 10px;
@@ -18,6 +51,9 @@
             background-color: red;
         }
         #maroon {
+            background-color: maroon;
+        }
+		  #maroon1 {
             background-color: maroon;
         }
         #blue {
@@ -38,35 +74,45 @@
         #blackpath {
             background-color: black;
 		  }
-		   #fullfield {
+		   #fullField {
             background-color: orange;
         }
-		   #halffield {
+		   #halfField {
             background-color: orange;
+		  }  
+			#saveButton {
+            background-color: green;
+        }
+		   #undoButton {
+            background-color: tomato;
 		  }  
     </style>
 </head>
 <body>
     <canvas id="myCanvas" width="1140" height="600"></canvas>
     <div>
-        <button id="maroon" onclick="clearCanvas()">Clear All</button>
-        <button id="maroon" onclick="clearPaths()">Clear Drawings</button>
         <button id="red" onclick="addCircle('red')">Red Ball</button>
         <button id="blue" onclick="addCircle('blue')">Blue Ball</button>
         <button id="gold" onclick="addCircle('gold')">Egg</button>
         <input type="number" min="10" max="150" value="25" id="radiusInput" oninput="updateRadiusValue()">Radius</input>
-        <input type="checkbox" id="drawCheckbox" name="Draw"> </input>Draw  
+        <input type="checkbox" id="drawCheckbox" name="Draw">
+		<label class="toggle-button" for="drawCheckbox"></label> Draw 
         <input type="color" id="colorInput" value="#000000" onchange="updatePathColor()">Color</input>
         <button id="redpath" onclick="updatePathColor('red')">Red</button>
         <button id="bluepath" onclick="updatePathColor('blue')">Blue</button>
         <button id="blackpath" onclick="updatePathColor('black')">Black</button>
         Size: <input type="number" min="1" max="10" value="2" id="sizeInput" 
 oninput="updatePathSize()"></input>
-<button id="fullfield" onclick="fullField()">Full Field</button>
-<button id="halffield" onclick="halfField()">Half Field</button>
+<button id="fullField" onclick="fullField()">Full Field</button>
+<button id="halfField" onclick="halfField()">Half Field</button>
+<button id="saveButton" onclick="saveCanvasAsImage()">Save as PNG</button>
+<button id="undoButton" onclick="undo()">Undo</button>
+<button id="maroon1" onclick="clearCanvas()">Clear All</button>
+<button id="maroon" onclick="clearPaths()">Clear Drawings</button>
     </div>
 
     <script>
+		  var canvasStates = [];
         var pathSize = 2; // Default path size
         var pathColor = "black"; // Default path color
         var canvas = document.getElementById("myCanvas");
@@ -207,6 +253,47 @@ oninput="updatePathSize()"></input>
            canvas.width = 1140;
             canvas.height = 600;
 			}
+			function saveCanvasAsImage() {
+  // Create a temporary canvas with the same dimensions as the original canvas
+  var tempCanvas = document.createElement("canvas");
+  tempCanvas.width = canvas.width;
+  tempCanvas.height = canvas.height;
+  var tempCtx = tempCanvas.getContext("2d");
+
+  // Draw the background image on the temporary canvas
+  var backgroundImage = new Image();
+  backgroundImage.src = "field.png";
+  tempCtx.drawImage(backgroundImage, 0, 0, tempCanvas.width, tempCanvas.height);
+
+  // Draw the circles and paths on the temporary canvas
+  drawCircles();
+  drawPaths();
+
+  // Create a data URL for the temporary canvas
+  var dataURL = tempCanvas.toDataURL("image/png");
+
+  // Create a link element and set the data URL as its href
+  var link = document.createElement("a");
+  link.href = dataURL;
+  link.download = "canvas_image.png";
+
+  // Programmatically click the link to trigger the download
+  link.click();
+}
+function undo() {
+  if (paths.length > 0) {
+    paths.pop(); // Remove the last path
+
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Redraw the balls
+    drawCircles();
+
+    // Redraw the remaining paths
+    drawPaths();
+  }
+}
 
         canvas.addEventListener("mousedown", function(event) {
             if (event.button === 0) {
