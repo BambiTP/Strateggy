@@ -7,39 +7,7 @@
             background-image: url("field.png");
             background-size: cover;
         }
-#drawCheckbox {
-        display: none; /* Hide the default checkbox */
-    }
 
-    .toggle-button {
-        background-color: #ccc;
-        position: relative;
-        display: inline-block;
-        width: 50px;
-        height: 25px;
-        border-radius: 25px;
-        transition: background-color 0.3s;
-    }
-
-    .toggle-button:before {
-        content: "";
-        position: absolute;
-        top: 2px;
-        left: 2px;
-        width: 21px;
-        height: 21px;
-        border-radius: 50%;
-        background-color: white;
-        transition: transform 0.3s;
-    }
-
-    #drawCheckbox:checked + .toggle-button {
-        background-color: #4CAF50; /* Green color when checked */
-    }
-
-    #drawCheckbox:checked + .toggle-button:before {
-        transform: translateX(25px); /* Move the button to the right when checked */
-    }
         button {
             margin: 10px;
             padding: 10px;
@@ -95,8 +63,9 @@
         <button id="blue" onclick="addCircle('blue')">Blue Ball</button>
         <button id="gold" onclick="addCircle('gold')">Egg</button>
         <input type="number" min="10" max="150" value="25" id="radiusInput" oninput="updateRadiusValue()">Radius</input>
-        <input type="checkbox" id="drawCheckbox" name="Draw">
-		<label class="toggle-button" for="drawCheckbox"></label> Draw 
+        <input type="radio" id="none" name="radioGroup" value="option1" checked>None
+      <input type="radio" id="drawCheckbox" name="radioGroup" value="option2">Draw
+    <input type="radio" id="lineCheckbox" name="radioGroup" value="option3">Line
         <input type="color" id="colorInput" value="#000000" onchange="updatePathColor()">Color</input>
         <button id="redpath" onclick="updatePathColor('red')">Red</button>
         <button id="bluepath" onclick="updatePathColor('blue')">Blue</button>
@@ -105,9 +74,10 @@
 oninput="updatePathSize()"></input>
 <button id="fullField" onclick="fullField()">Full Field</button>
 <button id="halfField" onclick="halfField()">Half Field</button>
+<button id="saveButton" onclick="saveCanvasAsImage()">Save as PNG</button>
 <button id="undoButton" onclick="undo()">Undo</button>
-<button id="maroon" onclick="clearPaths()">Clear Drawings</button>
 <button id="maroon1" onclick="clearCanvas()">Clear All</button>
+<button id="maroon" onclick="clearPaths()">Clear Drawings</button>
     </div>
 
     <script>
@@ -313,7 +283,84 @@ function undo() {
             selectedCircle = null;
             isDrawing = false;
         });
+
+var isDrawingLine = false;
+        var lineStartX = 0;
+        var lineStartY = 0;
+
+        function startDrawingLine(event) {
+            if (event.button === 0 && document.getElementById("lineCheckbox").checked) {
+                isDrawingLine = true;
+                lineStartX = event.clientX - canvas.offsetLeft;
+                lineStartY = event.clientY - canvas.offsetTop;
+            }
+        }
+
+        function drawLinePreview(event) {
+            if (isDrawingLine) {
+                var rect = canvas.getBoundingClientRect();
+                var lineEndX = event.clientX - rect.left;
+                var lineEndY = event.clientY - rect.top;
+
+                // Clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Redraw the balls
+                drawCircles();
+
+                // Redraw the existing paths
+                drawPaths();
+
+                // Draw the preview line
+                ctx.beginPath();
+                ctx.moveTo(lineStartX, lineStartY);
+                ctx.lineTo(lineEndX, lineEndY);
+                ctx.strokeStyle = pathColor;
+                ctx.lineWidth = pathSize;
+                ctx.stroke();
+            }
+        }
+
+        function finishDrawingLine(event) {
+            if (isDrawingLine) {
+                isDrawingLine = false;
+                var lineEndX = event.clientX - canvas.offsetLeft;
+                var lineEndY = event.clientY - canvas.offsetTop;
+
+                // Create a new path for the line
+                var path = {
+                    path: new Path2D(),
+                    color: pathColor,
+                    size: pathSize
+                };
+                path.path.moveTo(lineStartX, lineStartY);
+                path.path.lineTo(lineEndX, lineEndY);
+                paths.push(path);
+
+                // Clear the canvas
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Redraw the balls
+                drawCircles();
+
+                // Redraw all paths
+                drawPaths();
+            }
+        }
+
+        canvas.addEventListener("mousedown", startDrawingLine);
+        canvas.addEventListener("mousemove", drawLinePreview);
+        canvas.addEventListener("mouseup", finishDrawingLine);
+document.addEventListener("keydown", function(event) {
+  // Check if the Ctrl key and Z key are pressed simultaneously
+  if (event.ctrlKey && event.key === "z") {
+    // Run the undo command here
+    undo();
+  }
+});
+
+
     </script>
 </body>
 </html>
-Right Click to Erase. You can also zoom out. Made By Bambi
+Right Click to Erase. You can zoom out also.
