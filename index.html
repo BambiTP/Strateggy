@@ -200,6 +200,7 @@
     #fullFieldButton { background-color: #c77d1a; }
     #blueHalfButton { background-color: #1a7fc1; }
     #redHalfButton { background-color: #c0392b; }
+    .files button.field-active { box-shadow: inset 0 -3px 0 #fff; font-weight: bold; }
     #open-form-button { background-color: #f9e076; }
     .sidebar {
       display: flex;
@@ -552,10 +553,10 @@ input[type="checkbox"]:checked::after {
 <body>
   <div class="files">
     <div class="files-left">
-      <div class="btn-group" title="Field views - fit the whole field or one half">
-        <button id="fullFieldButton" onclick="fitFieldRegion('full')">Full Field</button>
-        <button id="blueHalfButton" onclick="fitFieldRegion('blue')">Blue Half</button>
-        <button id="redHalfButton" onclick="fitFieldRegion('red')">Red Half</button>
+      <div class="btn-group" title="Board - the whole field or just one half">
+        <button id="fullFieldButton" class="field-active" onclick="setFieldRegion('full')">Full Field</button>
+        <button id="blueHalfButton" onclick="setFieldRegion('blue')">Blue Half</button>
+        <button id="redHalfButton" onclick="setFieldRegion('red')">Red Half</button>
       </div>
     </div>
     <div class="files-right">
@@ -892,14 +893,51 @@ input[type="checkbox"]:checked::after {
     // blank draw margin.
     function fitToScreen() { fitToBounds(computeContentBounds()); }
 
-    // Field view presets - the whole field, or just the blue (left) or
-    // red (right) half, split at the 50 yard line.
-    function fitFieldRegion(region) {
-      if (!finalMapImage) return;
-      var halfW = finalMapImage.width / 2;
-      var x = mapOffsetX + (region === 'red' ? halfW : 0);
-      var w = region === 'full' ? finalMapImage.width : halfW;
-      fitToBounds({ x: x, y: mapOffsetY, w: w, h: finalMapImage.height });
+    // Board size - the whole field, or just the blue (left) or red (right)
+    // half, split at the 50 yard line. A half isn't just a zoomed view: the
+    // board itself becomes that half (finalMapImage is cropped to it, and
+    // the canvases shrink to match), so fit, exports and ball spawns all
+    // only cover the half.
+    var fieldImage = null;     // the full, uncropped field.png
+    var fieldRegion = 'full';  // 'full' | 'blue' | 'red'
+
+    // The region's x-range within field.png.
+    function fieldRegionRect(region) {
+      var halfW = Math.round(fieldImage.width / 2);
+      if (region === 'blue') return { x: 0, w: halfW };
+      if (region === 'red') return { x: halfW, w: fieldImage.width - halfW };
+      return { x: 0, w: fieldImage.width };
+    }
+
+    function setFieldRegion(region) {
+      if (!fieldImage) return;
+      if (editingText) commitTextEditor();
+      // Shift every ball and drawing so it stays on the same spot of the
+      // field - stuff on the half being cut off lands outside the board,
+      // and comes back when switching back to that half or the full field.
+      var dx = fieldRegionRect(fieldRegion).x - fieldRegionRect(region).x;
+      if (dx) {
+        circles.forEach(function(c) { c.x += dx; });
+        paths.forEach(function(p) { translateShape(p, dx, 0); });
+      }
+      fieldRegion = region;
+      var r = fieldRegionRect(region);
+      var crop = document.createElement('canvas');
+      crop.width = r.w;
+      crop.height = fieldImage.height;
+      crop.getContext('2d').drawImage(fieldImage, r.x, 0, r.w, fieldImage.height, 0, 0, r.w, fieldImage.height);
+      finalMapImage = crop;
+      canvas.width = crop.width + MAP_MARGIN * 2;
+      canvas.height = crop.height + MAP_MARGIN * 2;
+      pathsCanvas.width = canvas.width;
+      pathsCanvas.height = canvas.height;
+      mapOffsetX = MAP_MARGIN;
+      mapOffsetY = MAP_MARGIN;
+      drawCanvas();
+      fitToBounds({ x: mapOffsetX, y: mapOffsetY, w: crop.width, h: crop.height });
+      [['full', 'fullFieldButton'], ['blue', 'blueHalfButton'], ['red', 'redHalfButton']].forEach(function(pair) {
+        document.getElementById(pair[1]).classList.toggle('field-active', pair[0] === region);
+      });
     }
 
     function triggerPngDownload(sourceCanvas, filename) {
@@ -1155,9 +1193,9 @@ input[type="checkbox"]:checked::after {
       if (event.key === '+' || event.key === '=') { zoomIn(); }
       else if (event.key === '-' || event.key === '_') { zoomOut(); }
       else if (event.key === '0') { fitToScreen(); }
-      else if (event.key === 'f' || event.key === 'F') { fitFieldRegion('full'); }
-      else if (event.key === '[') { fitFieldRegion('blue'); }
-      else if (event.key === ']') { fitFieldRegion('red'); }
+      else if (event.key === 'f' || event.key === 'F') { setFieldRegion('full'); }
+      else if (event.key === '[') { setFieldRegion('blue'); }
+      else if (event.key === ']') { setFieldRegion('red'); }
     });
     var circles = [];
     var paths = []; // For freehand drawing
@@ -1175,7 +1213,8 @@ input[type="checkbox"]:checked::after {
     let bombEnabled = false;
     let tagproEnabled = false;
     
-    // Global variable: finalMapImage holds the loaded field.png (background)
+    // Global variable: finalMapImage holds the board's background - field.png,
+    // or the half of it currently in use (see setFieldRegion)
     var finalMapImage = null;
     // Blank margin (in canvas pixels) around the field so users can draw/
     // place markers outside its edges.
@@ -1346,8 +1385,9 @@ function drawBlueCircle() {
   addCircle("blue", eggEnabled, jukeEnabled, bombEnabled, tagproEnabled);
 }
 
-// Loose egg - dropped at the 50 yard line (kickoff spot) rather than a
-// random spot like a ball, nudged a little if one is already sitting there.
+// Loose egg - dropped at the center of the board (the 50 yard line on the
+// full field) rather than a random spot like a ball, nudged a little if
+// one is already sitting there.
 function drawEgg() {
   var cx = finalMapImage ? mapOffsetX + finalMapImage.width / 2 : canvas.width / 2;
   var cy = finalMapImage ? mapOffsetY + finalMapImage.height / 2 : canvas.height / 2;
@@ -1357,25 +1397,13 @@ function drawEgg() {
   drawPathsLayer();
 }
 
-// The egg, drawn procedurally (it isn't in the TagPro texture packs): a
-// gold, slightly tall oval with a highlight, filling a size x size box
-// whose top-left is (x, y) - the same footprint as a 40px ball tile.
+// The egg: a plain yellow circle, sized like a TagPro ball (radius 19 in
+// a 40px tile), filling a size x size box whose top-left is (x, y).
 function drawEggSprite(c, x, y, size) {
-  var cx = x + size / 2, cy = y + size / 2;
-  var rx = size * 0.38, ry = size * 0.47;
-  c.save();
-  var grad = c.createRadialGradient(cx - rx * 0.35, cy - ry * 0.4, size * 0.04, cx, cy, ry * 1.1);
-  grad.addColorStop(0, '#fff6c2');
-  grad.addColorStop(0.45, '#f4c430');
-  grad.addColorStop(1, '#b8860b');
   c.beginPath();
-  c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-  c.fillStyle = grad;
+  c.arc(x + size / 2, y + size / 2, size * 19 / 40, 0, Math.PI * 2);
+  c.fillStyle = 'yellow';
   c.fill();
-  c.lineWidth = Math.max(1, size / 26);
-  c.strokeStyle = '#6b4f00';
-  c.stroke();
-  c.restore();
 }
 
 // Egg art doesn't depend on the texture pack, so these can render before
@@ -2467,8 +2495,7 @@ function undo() {
       });
     }
 
-    // Loads field.png as the background, with a blank drawable margin
-    // around it, then fits the view to it.
+    // Loads field.png as the background (see setFieldRegion).
     function loadField() {
       showLoading('Loading field...');
       // Plain same-origin load (no crossOrigin flag, unlike loadImage's
@@ -2479,15 +2506,8 @@ function undo() {
         img.onerror = reject;
         img.src = 'field.png';
       }).then(function(img) {
-        finalMapImage = img;
-        canvas.width = img.width + MAP_MARGIN * 2;
-        canvas.height = img.height + MAP_MARGIN * 2;
-        pathsCanvas.width = canvas.width;
-        pathsCanvas.height = canvas.height;
-        mapOffsetX = MAP_MARGIN;
-        mapOffsetY = MAP_MARGIN;
-        drawCanvas();
-        fitToScreen();
+        fieldImage = img;
+        setFieldRegion(fieldRegion);
       }).catch(function(err) {
         console.error("[Strateggy] Error loading field", err);
         alert("Failed to load the field image.");
