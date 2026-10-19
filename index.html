@@ -1270,23 +1270,19 @@ function drawCircle(tileObj) {
     tileY = 0;
   }
   
-  // Draw the circle tile - or a plain team-colored disc while the texture
-  // pack is still loading (or failed to load).
-  if (images.tile) {
-    ctx.drawImage(
-      images.tile,                     // Tile sheet image.
-      tileX * config.tileSize,         // Source x.
-      tileY * config.tileSize,         // Source y.
-      config.tileSize, config.tileSize, // Source width & height.
-      tileObj.x, tileObj.y,            // Destination x & y.
-      config.tileSize, config.tileSize  // Destination width & height.
-    );
-  } else {
-    ctx.beginPath();
-    ctx.arc(tileObj.x + 20, tileObj.y + 20, 19, 0, Math.PI * 2);
-    ctx.fillStyle = tileObj.color;
-    ctx.fill();
-  }
+  // Balls are drawn straight from the texture pack's tile sheet - they
+  // show up once it has loaded (loadTextures redraws them).
+  if (!images.tile) return;
+
+  // Draw the circle tile.
+  ctx.drawImage(
+    images.tile,                     // Tile sheet image.
+    tileX * config.tileSize,         // Source x.
+    tileY * config.tileSize,         // Source y.
+    config.tileSize, config.tileSize, // Source width & height.
+    tileObj.x, tileObj.y,            // Destination x & y.
+    config.tileSize, config.tileSize  // Destination width & height.
+  );
 
   // Carried egg - a smaller egg tucked against the ball's top-right, in
   // roughly the spot StraTAGy draws a carried flag.
@@ -1306,7 +1302,7 @@ function drawCircle(tileObj) {
   // - Rolling Bomb: a solid yellow tint over the ball, not a white glow.
   var cx = tileObj.x + 20, cy = tileObj.y + 20;
 
-  if (tileObj.hasJuke && images.tile) {
+  if (tileObj.hasJuke) {
     ctx.drawImage(images.tile, 12 * config.tileSize, 4 * config.tileSize, config.tileSize, config.tileSize,
                    tileObj.x + 21, tileObj.y + 21, 18, 18);
   }
@@ -1396,22 +1392,15 @@ function renderEggIcons() {
 
 function renderBallIcons() {
   renderEggIcons();
+  if (!images.tile) return;
   var redIcon = document.getElementById('redBallIcon');
   var blueIcon = document.getElementById('blueBallIcon');
   if (!redIcon || !blueIcon) return;
   var ts = configMap.tileSize;
-  [{ canvas: redIcon, tileX: 14, color: 'red' }, { canvas: blueIcon, tileX: 15, color: 'blue' }].forEach(function(entry) {
+  [{ canvas: redIcon, tileX: 14 }, { canvas: blueIcon, tileX: 15 }].forEach(function(entry) {
     var iconCtx = entry.canvas.getContext('2d');
     iconCtx.imageSmoothingEnabled = false;
     iconCtx.clearRect(0, 0, entry.canvas.width, entry.canvas.height);
-    // Same plain-disc fallback drawCircle uses until the tile sheet loads.
-    if (!images.tile) {
-      iconCtx.beginPath();
-      iconCtx.arc(entry.canvas.width / 2, entry.canvas.height / 2, entry.canvas.width / 2 - 1, 0, Math.PI * 2);
-      iconCtx.fillStyle = entry.color;
-      iconCtx.fill();
-      return;
-    }
     iconCtx.drawImage(images.tile, entry.tileX * ts, 0, ts, ts, 0, 0, entry.canvas.width, entry.canvas.height);
   });
 }
