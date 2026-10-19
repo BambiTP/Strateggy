@@ -1,365 +1,2642 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Strateggy</title>
-    <style>
-        canvas {
-            background-image: url("field.png");
-            background-size: cover;
-        }
+  <meta charset="UTF-8">
+  <title>Strateggy</title>
+  <style>
+    /* Original CSS for drawing and UI */
+    .toolbar-right {
+      top: 0;
+      right: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: flex-start;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 25px;
+      color: white;
+      border: none;
+      border-radius: 1px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    #green { background-color: green; }
+    #clearButton { background-color: darkred; }
+    #undoButton { background-color: tomato; }
+    #Info { background-color: lime; }
+    #colorAdd {
+      background-color: gray; /* overwritten to match #colorInput's value once JS runs */
+      padding: 4px 9px;
+      font-size: 12px;
+      color: #fff;
+      text-shadow: 0 0 2px #000, 0 0 3px #000;
+      border: 1px solid #999;
+      border-radius: 4px;
+    }
+    #colors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      max-width: 100%;
+    }
+    #colors button {
+      padding: 4px 10px;
+      font-size: 13px;
+      margin-right: 0;
+    }
+    .toggle-btn {
+      display: inline-block;
+      padding: 4px 10px;
+      background-color: #e0e0e0;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .toggle-btn.active {
+      background-color: #a0a0a0;
+      opacity: 0.5;
+    }
+    .toggle-btn:not(:last-child) { margin-right: 10px; }
+    .tool-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .tool-settings {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: 6px;
+      padding-left: 10px;
+      border-left: 1px solid #ccc;
+      flex-wrap: wrap;
+    }
+    .size-control {
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    .size-control.visible { display: flex; }
+    .size-control input[type="number"] { width: 55px; }
+    .shape-extra {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .shape-extra.visible { display: flex; }
+    .mini-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 15px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    /* Custom (not native) checkbox - native "appearance: auto" checkboxes
+       ignore CSS border-width in most browsers, so the only way to control
+       how thick the checkmark's lines are is to draw it ourselves. */
+    .mini-toggle input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      border: 2px solid #888;
+      border-radius: 3px;
+      background: #fff;
+      transform: none;
+      cursor: pointer;
+      box-sizing: border-box;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .mini-toggle input[type="checkbox"]:not(:checked)::after { content: none !important; }
+    .mini-toggle input[type="checkbox"]:checked {
+      background: #4a90d9;
+      border-color: #4a90d9;
+    }
+    .mini-toggle input[type="checkbox"]:checked::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 1px;
+      width: 4px;
+      height: 9px;
+      border: solid #fff;
+      border-width: 0 3px 3px 0;
+      transform: rotate(45deg);
+    }
+    .arrow-settings {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .arrow-settings.visible { display: flex; }
+    .arrow-settings select, .arrow-settings input[type="number"] {
+      font-size: 13px;
+      padding: 3px 4px;
+    }
+    .arrow-settings input[type="number"] { width: 50px; }
+    .arrow-dim-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 12px;
+    }
+    .arrow-dim-control.hidden { display: none; }
+    .arrow-dim-control input[type="number"] { width: 44px; }
+    input[type="radio"] { display: none; }
+    #colorInput {
+      width: 22px;
+      height: 22px;
+      border: none;
+      padding: 0;
+      background: none;
+      cursor: pointer;
+      appearance: none;
+      outline: none;
+    }
+    #colorInput::-webkit-color-swatch-wrapper { padding: 0; }
+    #colorInput::-webkit-color-swatch { border: none; border-radius: 50%; }
+    #colorInput::-moz-color-swatch { border: none; border-radius: 50%; }
+    #colorInput::-moz-focus-inner { border: none; }
+    .color-picker-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 6px 0;
+    }
+    #colorName {
+      padding: 3px 6px;
+      font-size: 12px;
+      width: 90px;
+      border: 1px solid #bbb;
+      border-radius: 5px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    #colorName:focus {
+      border-color: #4a90d9;
+      box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.25);
+    }
+    #colorInputWrap {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #bbb;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #fullFieldButton { background-color: #c77d1a; }
+    #blueHalfButton { background-color: #1a7fc1; }
+    #redHalfButton { background-color: #c0392b; }
+    #open-form-button { background-color: #f9e076; }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      flex: 0 0 20%;
+      width: 20%;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+    .sidebar label,
+    .sidebar input,
+    .sidebar button {
+      margin: 5px 0;
+      width: auto;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+    .modal-content {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .modal-textbox {
+      background-color: white;
+      padding: 20px;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      max-width: 400px;
+      max-height: 100%;
+      overflow-y: auto;
+      box-sizing: border-box;
+      font-size: 18px;
+    }
+    .close-button {
+      background-color: #ccc;
+      border: none;
+      color: #000;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 16px;
+      margin-top: 16px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    #paletteToggleButton {
+      background-color: #6c5ce7;
+      color: #fff;
+      border: none;
+      padding: 6px 14px;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .palette-editor {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid #ddd;
+    }
+    .palette-editor-hidden { display: none; }
+    .palette-json-textbox {
+      width: 100%;
+      height: 180px;
+      box-sizing: border-box;
+      font-family: monospace;
+      font-size: 12px;
+      padding: 6px;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      resize: vertical;
+    }
+    .palette-json-error {
+      color: #c0392b;
+      font-size: 12px;
+      min-height: 14px;
+      margin-top: 2px;
+    }
+    .palette-editor-controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .palette-editor-controls button {
+      font-size: 12px;
+      padding: 4px 8px;
+      cursor: pointer;
+      border: 1px solid #bbb;
+      border-radius: 4px;
+      background: #eee;
+      color: #000;
+    }
+    .palette-upload-input { display: none; }
+    .ballPropsMenu {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      background: #2b2b2b;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 6px;
+      padding: 8px;
+      font-size: 13px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+    .ballPropToggle {
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      padding: 0;
+      margin: 0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 22px;
+      font-weight: bold;
+      color: #fff;
+      background-color: #c0392b;
+    }
+    .ballPropToggle.on { background-color: #27ae60; }
+    .ballPropSection {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 2px;
+    }
+    .ballPropSection + .ballPropSection {
+      margin-top: 4px;
+      border-top: 1px solid #555;
+      padding-top: 8px;
+    }
+    .ballPropIconToggle {
+      width: 28px;
+      height: 28px;
+    }
+    .ballPropIcon {
+      width: 22px;
+      height: 22px;
+      image-rendering: pixelated;
+      display: block;
+      pointer-events: none;
+    }
+    .textEditOverlay {
+      position: fixed;
+      z-index: 10000;
+      min-width: 30px;
+      min-height: 1.2em;
+      padding: 2px 3px;
+      margin: 0;
+      outline: 2px dashed #4da3ff;
+      background: rgba(255, 255, 255, 0.12);
+      white-space: pre-wrap;
+      line-height: 1.2;
+    }
+    .textEditOverlay.hidden { display: none; }
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; flex-direction: column; }
+    .files {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 4px 8px;
+    }
+    .files-left, .files-right {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .files button, .files input { font-size: 14px; }
+    .files button { padding: 4px 10px; }
+    .btn-group { display: flex; }
+    .btn-group button { margin-right: 0; border-radius: 0; }
+    .btn-group button:not(:last-child) { border-right: 1px solid rgba(255, 255, 255, 0.3); }
+    .btn-group .icon-btn { padding: 4px 8px; font-size: 16px; line-height: 1; flex: 0 0 auto; }
+    #zoomOutButton, #zoomInButton, #fitButton { background-color: #3f6b8a; }
+    #saveViewButton, #downloadViewButton { background-color: teal; }
+    #saveFullButton, #downloadFullButton { background-color: #7d3fa8; }
+    .container { display: flex; flex: 1; min-height: 0; }
+    .canvas-wrapper {
+      position: relative;
+      flex: 0 0 80%;
+      width: 80%;
+      min-width: 0;
+      overflow: hidden;
+      background: #1e1e1e;
+      touch-action: none;
+      cursor: default;
+    }
+    #canvas, #pathsCanvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+    #pathsCanvas { pointer-events: none; }
+    .loading-overlay {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 100;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      color: white;
+      font-size: 18px;
+    }
+    .loading-overlay.active { display: flex; }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 5px solid rgba(255, 255, 255, 0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    /* Texture pack dropdown – positioned in the top-right */
 
-        button {
-            margin: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            color: white;
-            font-weight: bold;
-        }
-        #red {
-            background-color: red;
-        }
-        #maroon {
-            background-color: maroon;
-        }
-		  #maroon1 {
-            background-color: maroon;
-        }
-        #blue {
-            background-color: blue;
-        }  
-        #gold {
-            background-color: gold;
-        }
-        #black {
-            background-color: black;
-        }
-        #bluepath {
-            background-color: blue;
-        }
-        #redpath {
-            background-color: red;
-        }
-        #blackpath {
-            background-color: black;
-		  }
-		   #fullField {
-            background-color: orange;
-        }
-		   #halfField {
-            background-color: orange;
-		  }  
-			#saveButton {
-            background-color: green;
-        }
-		   #undoButton {
-            background-color: tomato;
-		  }  
-    </style>
+#invisibleCanvas {
+  display: none;
+}
+#fm-texture-dropdown { position: relative; z-index: 200; }
+#fm-dropdown-button {
+    color: black;}
+
+.player-props-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.flag-selector-row, .pup-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+.icon-checkbox-label {
+  position: relative;
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+input[type="checkbox"].icon-checkbox-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  margin: 0;
+  opacity: 0;
+  transform: none;
+  cursor: pointer;
+  z-index: 1;
+}
+.icon-checkbox-canvas {
+  display: block;
+  width: 28px;
+  height: 28px;
+  image-rendering: pixelated;
+  border: 2px solid #999;
+  border-radius: 4px;
+  background: #d4d4d4;
+  box-sizing: border-box;
+}
+input[type="checkbox"].icon-checkbox-input:checked ~ .icon-checkbox-canvas {
+  border-color: #27ae60;
+  box-shadow: 0 0 0 2px #27ae6080;
+}
+.ball-button {
+  padding: 2px;
+  background: #d4d4d4;
+  border: 1px solid #999;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 0;
+}
+.ball-icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  display: block;
+}
+.add-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Remove the default checkbox appearance and set custom dimensions */
+input[type="checkbox"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  transform: translate(-5px, -6px);
+  width: 28px;
+  height: 28px;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  font-size: 20px;      /* Icon size */
+  line-height: 28px;    /* Center the icon vertically */
+  text-align: center;   /* Center the icon horizontally */
+  color: white;
+  background-color: red; /* Default red background for unchecked state */
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+/* When unchecked, show a red X */
+input[type="checkbox"]:not(:checked)::after {
+  content: "✕";
+}
+
+/* When checked, change background to green and show a checkmark */
+input[type="checkbox"]:checked {
+  background-color: green;
+  border-color: green;
+}
+
+input[type="checkbox"]:checked::after {
+  content: "✓";
+}
+
+
+  </style>
 </head>
 <body>
-    <canvas id="myCanvas" width="1140" height="600"></canvas>
-    <div>
-        <button id="red" onclick="addCircle('red')">Red Ball</button>
-        <button id="blue" onclick="addCircle('blue')">Blue Ball</button>
-        <button id="gold" onclick="addCircle('gold')">Egg</button>
-        <input type="number" min="10" max="150" value="19" id="radiusInput" oninput="updateRadiusValue()">Radius</input>
-        <input type="radio" id="none" name="radioGroup" value="option1" checked>None
-      <input type="radio" id="drawCheckbox" name="radioGroup" value="option2">Draw
-    <input type="radio" id="lineCheckbox" name="radioGroup" value="option3">Line
-        <input type="color" id="colorInput" value="#000000" onchange="updatePathColor()">Color</input>
-        <button id="redpath" onclick="updatePathColor('red')">Red</button>
-        <button id="bluepath" onclick="updatePathColor('blue')">Blue</button>
-        <button id="blackpath" onclick="updatePathColor('black')">Black</button>
-        Size: <input type="number" min="1" max="10" value="5" id="sizeInput" 
-oninput="updatePathSize()"></input>
-<button id="fullField" onclick="fullField()">Full Field</button>
-<button id="halfField" onclick="halfField()">Half Field</button>
-<button id="undoButton" onclick="undo()">Undo</button>
-<button id="maroon1" onclick="clearCanvas()">Clear All</button>
-<button id="maroon" onclick="clearPaths()">Clear Drawings</button>
+  <div class="files">
+    <div class="files-left">
+      <div class="btn-group" title="Field views - fit the whole field or one half">
+        <button id="fullFieldButton" onclick="fitFieldRegion('full')">Full Field</button>
+        <button id="blueHalfButton" onclick="fitFieldRegion('blue')">Blue Half</button>
+        <button id="redHalfButton" onclick="fitFieldRegion('red')">Red Half</button>
+      </div>
     </div>
+    <div class="files-right">
+      <button id="clearButton" onclick="clearPaths()">Clear Lines</button>
+      <button id="clearButton" onclick="clearCanvas()">Clear All</button>
+      <button id="undoButton" onclick="undo()">Undo</button>
+      <div class="btn-group" title="Zoom controls">
+        <button id="zoomOutButton" onclick="zoomOut()">-</button>
+        <button id="zoomInButton" onclick="zoomIn()">+</button>
+        <button id="fitButton" onclick="fitToScreen()">Fit</button>
+      </div>
+      <div class="btn-group" title="Current view - copy or download as PNG">
+        <button id="saveViewButton" onclick="copyCurrentViewToClipboard(this)">Copy View</button>
+        <button id="downloadViewButton" class="icon-btn" onclick="saveCurrentViewAsPNG()" title="Download current view as PNG" aria-label="Download current view as PNG">&#8681;</button>
+      </div>
+      <div class="btn-group" title="Full field - copy or download as PNG">
+        <button id="saveFullButton" onclick="copyFullMapToClipboard(this)">Copy Full Field</button>
+        <button id="downloadFullButton" class="icon-btn" onclick="saveFullMapAsPNG()" title="Download full field as PNG" aria-label="Download full field as PNG">&#8681;</button>
+      </div>
+      <button id="Info" onclick="openModal()">Info</button>
+    </div>
+  </div>
+  
+  <!-- Texture pack dropdown container -->
+  
+  <!-- Main container: field background canvas + drawing layer -->
+  <div class="container">
+    <div class="canvas-wrapper" id="canvasWrapper">
+      <canvas id="canvas" width="1000" height="760"></canvas>
+      <canvas id="pathsCanvas" width="1000" height="760"></canvas>
+      <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading field...</div>
+      </div>
+    </div>
+    <canvas id="invisibleCanvas"></canvas>
+    <div class="sidebar">
+      <div class="tool-row">
+        <label for="noneCheckbox" class="toggle-btn">
+          <input type="radio" id="noneCheckbox" name="radioGroup" value="option1" checked>
+          None
+        </label>
+        <label for="drawCheckbox" class="toggle-btn">
+          <input type="radio" id="drawCheckbox" name="radioGroup" value="option2">
+          Draw
+        </label>
+        <label for="rectCheckbox" class="toggle-btn">
+          <input type="radio" id="rectCheckbox" name="radioGroup" value="option3">
+          Rectangle
+        </label>
+        <label for="circleCheckbox" class="toggle-btn">
+          <input type="radio" id="circleCheckbox" name="radioGroup" value="option4">
+          Circle
+        </label>
+        <label for="lineCheckbox" class="toggle-btn">
+          <input type="radio" id="lineCheckbox" name="radioGroup" value="option5">
+          Line
+        </label>
+        <label for="textCheckbox" class="toggle-btn">
+          <input type="radio" id="textCheckbox" name="radioGroup" value="option7">
+          Text
+        </label>
+        <label for="selectCheckbox" class="toggle-btn">
+          <input type="radio" id="selectCheckbox" name="radioGroup" value="option8">
+          Select
+        </label>
+        <label for="panZoomCheckbox" class="toggle-btn">
+          <input type="radio" id="panZoomCheckbox" name="radioGroup" value="option6">
+          Pan/Zoom
+        </label>
+        <div class="tool-settings" id="toolSettings">
+          <div class="size-control" id="sizeControl">
+            <label for="sizeInput">Size</label>
+            <input type="number" min="1" max="999" value="6" id="sizeInput" oninput="updatePathSize()">
+          </div>
+          <div class="shape-extra" id="rectSettings">
+            <label class="mini-toggle"><input type="checkbox" id="rectFillToggle"> Fill</label>
+            <label class="mini-toggle"><input type="checkbox" id="rectSquareToggle"> Square</label>
+          </div>
+          <div class="shape-extra" id="circleSettings">
+            <label class="mini-toggle"><input type="checkbox" id="circleFillToggle"> Fill</label>
+            <label class="mini-toggle"><input type="checkbox" id="circleCircleToggle"> Circle</label>
+          </div>
+          <div class="shape-extra" id="lineSettings">
+            <label class="mini-toggle"><input type="checkbox" id="lineArrowToggle" onchange="updateToolUI()"> Arrow</label>
+            <div class="arrow-settings" id="arrowSettings">
+              <span class="arrow-dim-control">
+                <label for="lineArrowPosition" title="Arrowhead position">Pos</label>
+                <select id="lineArrowPosition" title="Arrowhead position">
+                  <option value="end">End</option>
+                  <option value="start">Start</option>
+                  <option value="both">Both</option>
+                </select>
+              </span>
+              <span class="arrow-dim-control">
+                <label for="lineArrowStyle" title="Arrowhead style">Type</label>
+                <select id="lineArrowStyle" title="Arrowhead style" onchange="updateArrowStyleUI()">
+                  <option value="triangle">Triangle</option>
+                  <option value="open">Open</option>
+                  <option value="barbed">Barbed</option>
+                  <option value="diamond">Diamond</option>
+                  <option value="dot">Dot</option>
+                  <option value="bar">Bar</option>
+                  <option value="none">None</option>
+                </select>
+              </span>
+              <span class="arrow-dim-control" id="arrowLengthControl">
+                <label for="lineArrowSize" title="Arrowhead length">L</label>
+                <input type="number" id="lineArrowSize" min="4" max="60" value="18" title="Arrowhead length">
+              </span>
+              <span class="arrow-dim-control" id="arrowWidthControl">
+                <label for="lineArrowWidth" title="Arrowhead width">W</label>
+                <input type="number" id="lineArrowWidth" min="2" max="60" value="5" title="Arrowhead width">
+              </span>
+            </div>
+          </div>
+          <div class="shape-extra" id="textSettings">
+            <span class="arrow-dim-control">
+              <label for="textFontFamily">Font</label>
+              <select id="textFontFamily">
+                <option value="Arial">Arial</option>
+                <option value="Georgia">Georgia</option>
+                <option value="'Courier New', monospace">Courier</option>
+                <option value="'Comic Sans MS', cursive">Comic Sans</option>
+                <option value="Impact">Impact</option>
+              </select>
+            </span>
+            <span class="arrow-dim-control">
+              <label for="textFontSize">Size</label>
+              <input type="number" id="textFontSize" min="6" max="200" value="24">
+            </span>
+            <label class="mini-toggle"><input type="checkbox" id="textBoldToggle"><b>B</b></label>
+            <label class="mini-toggle"><input type="checkbox" id="textItalicToggle"><i>I</i></label>
+            <label class="mini-toggle"><input type="checkbox" id="textUnderlineToggle"><u>U</u></label>
+          </div>
+        </div>
+      </div>
+      <div class="add-color-row">
+        <button id="red" class="ball-button" onclick="drawRedCircle()">
+          <canvas id="redBallIcon" class="ball-icon" width="40" height="40"></canvas>
+        </button>
+        <button id="blue" class="ball-button" onclick="drawBlueCircle()">
+          <canvas id="blueBallIcon" class="ball-icon" width="40" height="40"></canvas>
+        </button>
+        <button id="egg" class="ball-button" onclick="drawEgg()" title="Loose egg">
+          <canvas id="eggBallIcon" class="ball-icon" width="40" height="40"></canvas>
+        </button>
+        <div class="player-props-stack">
+          <div class="flag-selector-row">
+            <label class="icon-checkbox-label" for="eggCheckbox" title="New balls carry the egg">
+              <input type="checkbox" id="eggCheckbox" class="icon-checkbox-input">
+              <canvas class="icon-checkbox-canvas" id="eggIcon" width="28" height="28"></canvas>
+            </label>
+          </div>
+          <div class="pup-toggle-row">
+            <label class="icon-checkbox-label" for="jukeCheckbox">
+              <input type="checkbox" id="jukeCheckbox" class="icon-checkbox-input">
+              <canvas class="icon-checkbox-canvas" id="jukeIcon" width="28" height="28"></canvas>
+            </label>
+            <label class="icon-checkbox-label" for="bombCheckbox">
+              <input type="checkbox" id="bombCheckbox" class="icon-checkbox-input">
+              <canvas class="icon-checkbox-canvas" id="bombIcon" width="28" height="28"></canvas>
+            </label>
+            <label class="icon-checkbox-label" for="tagproCheckbox">
+              <input type="checkbox" id="tagproCheckbox" class="icon-checkbox-input">
+              <canvas class="icon-checkbox-canvas" id="tagproIcon" width="28" height="28"></canvas>
+            </label>
+          </div>
+        </div>
+      </div>
+      <div class="color-picker-row">
+        <div id="colorInputWrap">
+          <input type="color" id="colorInput" name="colorInput">
+        </div>
+        <input type="text" value="Some Color" id="colorName">
+        <button id="colorAdd" onclick="colorAdd('colorInput')">Add Color</button>
+      </div>
+      <div id="colors"></div>
+    </div>
+  </div>
+  
+  <!-- Live in-place editor for a "text" path (Text tool click / right-click
+       an existing text box to edit) - a position:fixed contenteditable div
+       kept over the text object's on-screen spot via canvasToClient(), with
+       its own font/size/style mirroring the object being typed so it looks
+       close to the final canvas render while editing. -->
+  <div id="textEditOverlay" contenteditable="true" class="textEditOverlay hidden"></div>
 
-    <script>
-		  var canvasStates = [];
-        var pathSize = 2; // Default path size
-        var pathColor = "black"; // Default path color
-        var canvas = document.getElementById("myCanvas");
-        var circles = [];
-        var paths = []; // Array to store the paths of freehand drawings
-        var radiusInput = document.getElementById("radiusInput");
-        var ctx = canvas.getContext("2d");
-        var isDrawing = false;
-        var selectedCircle = null;
+  <div id="ballPropsMenu" class="ballPropsMenu">
+    <div class="ballPropSection">
+      <button type="button" class="ballPropToggle ballPropIconToggle" id="ballPropEgg" title="Carrying the egg"><canvas class="ballPropIcon" id="ballPropEggIcon" width="24" height="24"></canvas></button>
+    </div>
+    <div class="ballPropSection">
+      <button type="button" class="ballPropToggle ballPropIconToggle" id="ballPropJuke"><canvas class="ballPropIcon" id="ballPropJukeIcon" width="24" height="24"></canvas></button>
+      <button type="button" class="ballPropToggle ballPropIconToggle" id="ballPropBomb"><canvas class="ballPropIcon" id="ballPropBombIcon" width="24" height="24"></canvas></button>
+      <button type="button" class="ballPropToggle ballPropIconToggle" id="ballPropTagpro"><canvas class="ballPropIcon" id="ballPropTagproIcon" width="24" height="24"></canvas></button>
+    </div>
+  </div>
 
-        function addCircle(color) {
-            var x = Math.floor(Math.random() * canvas.width);
-            var y = Math.floor(Math.random() * canvas.height);
-            var radius = Number(radiusInput.value);
-            var circle = { x: x, y: y, radius: radius, color: color };
-            circles.push(circle);
-            drawCanvas();
-        }
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-textbox">
+        <h2>Info</h2>
+        <p>Press N for none</p>
+        <p>Press D to draw</p>
+        <p>Press R for rectangle</p>
+        <p>Press C for circle</p>
+        <p>Press L for line</p>
+        <p>Press T for text</p>
+        <p>Press S for select (drag to move, corners to resize, Delete to remove)</p>
+        <p>Press P for pan/zoom (scroll to zoom, drag to pan)</p>
+        <p>Press F for full field, [ for blue half, ] for red half</p>
+        <p>Ctrl+Z to undo</p>
+        <p>Right Click to Erase Balls / the Egg</p>
+        <p>Right Click a Text Box to Edit It</p>
+        <p>Shift+Right Click a Ball to Set Egg/JJ/RB/TP</p>
+        <p><a href="https://github.com/BambiTP/Strateggy">Github</a></p>
+        <p><a href="https://bambitp.github.io/StraTAGy/">StraTAGy</a> (same tools, for any Fortunate Maps map)</p>
+        <button id="paletteToggleButton" onclick="togglePaletteEditor()">Palette</button>
+        <div id="paletteEditor" class="palette-editor palette-editor-hidden">
+          <textarea id="paletteJsonTextbox" class="palette-json-textbox" spellcheck="false"></textarea>
+          <div id="paletteJsonError" class="palette-json-error"></div>
+          <div class="palette-editor-controls">
+            <button type="button" onclick="saveColorsToCache()">Save to Cache</button>
+            <button type="button" onclick="copyPaletteJson()">Copy to Clipboard</button>
+            <button type="button" onclick="downloadPaletteJson()">Download</button>
+            <button type="button" onclick="document.getElementById('paletteUploadInput').click()">Upload</button>
+            <input type="file" id="paletteUploadInput" class="palette-upload-input" accept="application/json,.json">
+          </div>
+        </div>
+        <button class="close-button" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+  </div>
 
-        function drawCircle(circle) {
-            ctx.beginPath();
-            ctx.arc(circle.x, circle.y, circle.radius, 0, Math.PI * 2);
-            ctx.fillStyle = circle.color;
-            ctx.fill();
-            ctx.closePath();
-        }
+  
+  <script>
+    // =====================================================
+    // DRAWING FUNCTIONALITY (original code)
+    // =====================================================
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
+    // Drawing (paths) layer: a separate, transparent, same-size/same-
+    // transform canvas stacked on top of `canvas` (see #pathsCanvas CSS).
+    // Keeping strokes/shapes off the background canvas means an
+    // in-progress shape preview only has to clear+redraw this lightweight
+    // layer, not re-draw the full map bitmap every mousemove.
+    var pathsCanvas = document.getElementById('pathsCanvas');
+    var pathsCtx = pathsCanvas.getContext('2d');
+    var invisibleCanvas = document.getElementById('invisibleCanvas');
+    var canvasWrapper = document.getElementById('canvasWrapper');
+    var loadingOverlay = document.getElementById('loadingOverlay');
+    function showLoading(text) {
+      loadingOverlay.querySelector('.loading-text').textContent = text || 'Loading field...';
+      loadingOverlay.classList.add('active');
+    }
+    function hideLoading() {
+      loadingOverlay.classList.remove('active');
+    }
 
-        function drawCircles() {
-            for (var i = 0; i < circles.length; i++) {
-                drawCircle(circles[i]);
-            }
-        }
+    // =====================================================
+    // ZOOM & PAN
+    // =====================================================
+    var zoom = 1;
+    var panX = 0;
+    var panY = 0;
+    var MIN_ZOOM = 0.1;
+    var MAX_ZOOM = 8;
+    var TILE_SIZE = 40;
 
-        function drawPaths() {
-            for (var i = 0; i < paths.length; i++) {
-                ctx.strokeStyle = paths[i].color; 
-                ctx.lineWidth = paths[i].size; 
-                ctx.stroke(paths[i].path);
-            }
-        }
+    // Snap zoom so each 40px tile lands on a whole number of screen pixels,
+    // otherwise sub-pixel rounding leaves hairline seams between tiles.
+    function snapZoom(z) {
+      var screenTile = Math.max(1, Math.round(z * TILE_SIZE));
+      return screenTile / TILE_SIZE;
+    }
 
-        function drawCanvas() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawCircles();
-            drawPaths();
-        }
+    function applyTransform() {
+      panX = Math.round(panX);
+      panY = Math.round(panY);
+      var transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + ')';
+      canvas.style.transform = transform;
+      pathsCanvas.style.transform = transform;
+    }
 
-        function removeCircle(event) {
-            var rect = canvas.getBoundingClientRect();
-            var mouseX = event.clientX - rect.left;
-            var mouseY = event.clientY - rect.top;
-            for (var i = 0; i < circles.length; i++) {
-                var circle = circles[i];
-                var distance = Math.sqrt(Math.pow(mouseX - circle.x, 2) + Math.pow(mouseY - circle.y, 2));
-                if (distance <= circle.radius) {
-                    circles.splice(i, 1);
-                    drawCanvas();
-                    break;
-                }
-            }
-        }
+    // Bounding box (in canvas coords) of everything actually on the board -
+    // the map bitmap plus any balls/drawings, even where they stick out
+    // past the map into the blank margin. Used to fit/export just the
+    // content, never the empty margin around it.
+    function computeContentBounds() {
+      var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      function extend(x, y) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+      if (finalMapImage) {
+        extend(mapOffsetX, mapOffsetY);
+        extend(mapOffsetX + finalMapImage.width, mapOffsetY + finalMapImage.height);
+      }
+      circles.forEach(function(c) {
+        // Generous pad - covers flag offsets (+/-19px) and the tagpro/bomb
+        // glow rings (radius ~26px) drawn around the 40px ball tile.
+        var pad = 45;
+        extend(c.x - pad, c.y - pad);
+        extend(c.x + 40 + pad, c.y + 40 + pad);
+      });
+      paths.forEach(function(p) {
+        var bbox = shapeBoundingBox(p);
+        var pad = Math.max(2, (p.size || 2) / 2 + 2);
+        extend(bbox.x - pad, bbox.y - pad);
+        extend(bbox.x + bbox.w + pad, bbox.y + bbox.h + pad);
+      });
+      if (minX === Infinity) return { x: 0, y: 0, w: canvas.width, h: canvas.height };
+      minX = Math.max(0, minX);
+      minY = Math.max(0, minY);
+      maxX = Math.min(canvas.width, maxX);
+      maxY = Math.min(canvas.height, maxY);
+      return { x: minX, y: minY, w: Math.max(1, maxX - minX), h: Math.max(1, maxY - minY) };
+    }
 
-        canvas.addEventListener("contextmenu", function(event) {
-            event.preventDefault();
-            removeCircle(event);
+    function fitToBounds(bounds) {
+      var wrapperWidth = canvasWrapper.clientWidth;
+      var wrapperHeight = canvasWrapper.clientHeight;
+      if (!wrapperWidth || !wrapperHeight || !canvas.width || !canvas.height) return;
+      zoom = snapZoom(Math.min(wrapperWidth / bounds.w, wrapperHeight / bounds.h));
+      panX = (wrapperWidth - bounds.w * zoom) / 2 - bounds.x * zoom;
+      panY = (wrapperHeight - bounds.h * zoom) / 2 - bounds.y * zoom;
+      applyTransform();
+    }
+
+    // Fit to the actual content (field + drawings), not the surrounding
+    // blank draw margin.
+    function fitToScreen() { fitToBounds(computeContentBounds()); }
+
+    // Field view presets - the whole field, or just the blue (left) or
+    // red (right) half, split at the 50 yard line.
+    function fitFieldRegion(region) {
+      if (!finalMapImage) return;
+      var halfW = finalMapImage.width / 2;
+      var x = mapOffsetX + (region === 'red' ? halfW : 0);
+      var w = region === 'full' ? finalMapImage.width : halfW;
+      fitToBounds({ x: x, y: mapOffsetY, w: w, h: finalMapImage.height });
+    }
+
+    function triggerPngDownload(sourceCanvas, filename) {
+      var link = document.createElement('a');
+      link.download = filename;
+      link.href = sourceCanvas.toDataURL('image/png');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Copies a canvas's PNG contents to the system clipboard so it can be
+    // pasted elsewhere without going through a file download. Briefly
+    // updates the triggering button's label to confirm success/failure.
+    function copyCanvasToClipboard(sourceCanvas, button) {
+      var originalLabel = button ? button.textContent : null;
+      function flash(text, revertMs) {
+        if (!button) return;
+        button.textContent = text;
+        button.disabled = true;
+        setTimeout(function() {
+          button.textContent = originalLabel;
+          button.disabled = false;
+        }, revertMs);
+      }
+      if (!navigator.clipboard || typeof ClipboardItem === 'undefined') {
+        alert('Copying images to the clipboard is not supported in this browser. Use the download button instead.');
+        return;
+      }
+      sourceCanvas.toBlob(function(blob) {
+        if (!blob) return;
+        navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]).then(function() {
+          flash('Copied!', 1200);
+        }).catch(function(err) {
+          console.error('[Strateggy] Clipboard copy failed:', err);
+          flash('Copy failed', 1500);
         });
+      }, 'image/png');
+    }
 
-        function selectCircle(event) {
-            var rect = canvas.getBoundingClientRect();
-            var mouseX = event.clientX - rect.left;
-            var mouseY = event.clientY - rect.top;
-            for (var i = 0; i < circles.length; i++) {
-                var circle = circles[i];
-                var distance = Math.sqrt(Math.pow(mouseX - circle.x, 2) + Math.pow(mouseY - circle.y, 2));
-                if (distance <= circle.radius) {
-                    selectedCircle = circle;
-                    break;
-                }
-            }
-        }
+    // Composites the map + paths canvases (native resolution, ignoring
+    // current zoom/pan) into one PNG, cropped to just the content's own
+    // bounding box - none of the blank draw margin around it.
+    function buildFullMapCanvas() {
+      var bounds = computeContentBounds();
+      var out = document.createElement('canvas');
+      out.width = bounds.w;
+      out.height = bounds.h;
+      var octx = out.getContext('2d');
+      octx.drawImage(canvas, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
+      octx.drawImage(pathsCanvas, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
+      return out;
+    }
 
-        function moveCircle(event) {
-            if (selectedCircle) {
-                var rect = canvas.getBoundingClientRect();
-                selectedCircle.x = event.clientX - rect.left;
-                selectedCircle.y = event.clientY - rect.top;
-                drawCanvas(); // redraw the canvas with the updated circle position
-            }
-        }
+    // Captures exactly what's visible in the canvas-wrapper viewport right
+    // now (current zoom/pan), at the viewport's own pixel size.
+    function buildCurrentViewCanvas() {
+      var wrapperWidth = canvasWrapper.clientWidth;
+      var wrapperHeight = canvasWrapper.clientHeight;
+      var out = document.createElement('canvas');
+      out.width = wrapperWidth;
+      out.height = wrapperHeight;
+      var octx = out.getContext('2d');
+      octx.fillStyle = '#1e1e1e';
+      octx.fillRect(0, 0, wrapperWidth, wrapperHeight);
+      octx.save();
+      octx.translate(panX, panY);
+      octx.scale(zoom, zoom);
+      octx.drawImage(canvas, 0, 0);
+      octx.drawImage(pathsCanvas, 0, 0);
+      octx.restore();
+      return out;
+    }
 
-        function getStart(event) {
-            var path = {
-                path: new Path2D(),
-                color: pathColor,
-                size: pathSize
-            };
-            path.path.moveTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
-            paths.push(path);
-        }
+    function saveFullMapAsPNG() {
+      triggerPngDownload(buildFullMapCanvas(), 'strateggy-full-field.png');
+    }
 
-        function drawLine(event) {
-            var lastPath = paths[paths.length - 1];
-            lastPath.path.lineTo(event.clientX - canvas.offsetLeft, event.clientY - canvas.offsetTop);
-            ctx.strokeStyle = lastPath.color;
-            ctx.lineWidth = lastPath.size;
-            ctx.stroke(lastPath.path);
-        }
+    function copyFullMapToClipboard(button) {
+      copyCanvasToClipboard(buildFullMapCanvas(), button);
+    }
 
-        function clearPaths() {
-            paths = []; // Empty the paths array
-            drawCanvas(); // Redraw the canvas without the paths
-        }
+    function saveCurrentViewAsPNG() {
+      triggerPngDownload(buildCurrentViewCanvas(), 'strateggy-current-view.png');
+    }
 
-        function clearCanvas() {
-            circles = []; // Empty the circles array
-            paths = []; // Empty the paths array
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the entire canvas
-        }
+    function copyCurrentViewToClipboard(button) {
+      copyCanvasToClipboard(buildCurrentViewCanvas(), button);
+    }
 
-        function updatePathSize() {
-            pathSize = Number(document.getElementById("sizeInput").value);
-        }
+    function getCanvasCoords(event) {
+      var rect = canvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * (canvas.width / rect.width),
+        y: (event.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
 
-        function updatePathColor(color) {
-            if (color) {
-                pathColor = color;
-            } else {
-                pathColor = document.getElementById("colorInput").value;
-            }
-        }
-			function fullField() {
-            var canvas = document.getElementById("myCanvas");
-           canvas.width = 2280;
-            canvas.height = 600;
-			}
-		  function halfField() {
-            var canvas = document.getElementById("myCanvas");
-           canvas.width = 1140;
-            canvas.height = 600;
-			}
-			function saveCanvasAsImage() {
-  // Create a temporary canvas with the same dimensions as the original canvas
-  var tempCanvas = document.createElement("canvas");
-  tempCanvas.width = canvas.width;
-  tempCanvas.height = canvas.height;
-  var tempCtx = tempCanvas.getContext("2d");
+    // Inverse of getCanvasCoords - a canvas-space point's on-screen
+    // (viewport/client) position, used to place the fixed-position text
+    // editor and its format toolbar over the object they're editing.
+    function canvasToClient(x, y) {
+      var rect = canvas.getBoundingClientRect();
+      var scale = rect.width / canvas.width;
+      return { left: rect.left + x * scale, top: rect.top + y * scale, scale: scale };
+    }
 
-  // Draw the background image on the temporary canvas
-  var backgroundImage = new Image();
-  backgroundImage.src = "field.png";
-  tempCtx.drawImage(backgroundImage, 0, 0, tempCanvas.width, tempCanvas.height);
+    function zoomAt(clientX, clientY, factor) {
+      var wrapperRect = canvasWrapper.getBoundingClientRect();
+      var cursorX = clientX - wrapperRect.left;
+      var cursorY = clientY - wrapperRect.top;
+      var canvasPtX = (cursorX - panX) / zoom;
+      var canvasPtY = (cursorY - panY) / zoom;
+      zoom = snapZoom(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor)));
+      panX = cursorX - canvasPtX * zoom;
+      panY = cursorY - canvasPtY * zoom;
+      applyTransform();
+    }
 
-  // Draw the circles and paths on the temporary canvas
-  drawCircles();
-  drawPaths();
+    function zoomIn() {
+      var rect = canvasWrapper.getBoundingClientRect();
+      zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.25);
+    }
 
-  // Create a data URL for the temporary canvas
-  var dataURL = tempCanvas.toDataURL("image/png");
+    function zoomOut() {
+      var rect = canvasWrapper.getBoundingClientRect();
+      zoomAt(rect.left + rect.width / 2, rect.top + rect.height / 2, 1 / 1.25);
+    }
 
-  // Create a link element and set the data URL as its href
-  var link = document.createElement("a");
-  link.href = dataURL;
-  link.download = "canvas_image.png";
+    canvasWrapper.addEventListener('wheel', function(event) {
+      if (!isPanZoomMode()) return;
+      event.preventDefault();
+      var factor = event.deltaY < 0 ? 1.1 : 1 / 1.1;
+      zoomAt(event.clientX, event.clientY, factor);
+    }, { passive: false });
 
-  // Programmatically click the link to trigger the download
-  link.click();
+    function isPanZoomMode() {
+      return document.getElementById('panZoomCheckbox').checked;
+    }
+
+    function getSelectedTool() {
+      if (document.getElementById('drawCheckbox').checked) return 'draw';
+      if (document.getElementById('rectCheckbox').checked) return 'rect';
+      if (document.getElementById('circleCheckbox').checked) return 'circle';
+      if (document.getElementById('lineCheckbox').checked) return 'line';
+      if (document.getElementById('textCheckbox').checked) return 'text';
+      if (document.getElementById('selectCheckbox').checked) return 'select';
+      if (document.getElementById('panZoomCheckbox').checked) return 'panzoom';
+      return 'none';
+    }
+
+    function updateToolUI() {
+      var tool = getSelectedTool();
+      var showSize = tool === 'draw' || tool === 'rect' || tool === 'circle' || tool === 'line';
+      document.getElementById('sizeControl').classList.toggle('visible', showSize);
+      document.getElementById('rectSettings').classList.toggle('visible', tool === 'rect');
+      document.getElementById('circleSettings').classList.toggle('visible', tool === 'circle');
+      document.getElementById('lineSettings').classList.toggle('visible', tool === 'line');
+      // Also shown (regardless of active tool) while a text box is being
+      // typed into or is the current Select-tool selection, so its
+      // font/size/style can be changed without switching back to Text.
+      document.getElementById('textSettings').classList.toggle('visible', tool === 'text' || !!currentTextTarget());
+      var arrowOn = tool === 'line' && document.getElementById('lineArrowToggle').checked;
+      document.getElementById('arrowSettings').classList.toggle('visible', arrowOn);
+      canvasWrapper.style.cursor = isPanZoomMode() ? 'grab' : 'default';
+    }
+
+    var pathSize = 6; // Default size for paths
+
+    // Per-style base L/W, defined at the reference line thickness below.
+    var ARROW_STYLE_DEFAULTS = {
+      triangle: { size: 20, width: 10 },
+      open:     { size: 20, width: 10 },
+      barbed:   { size: 20, width: 10 },
+      diamond:  { size: 20, width: 20 },
+      dot:      { size: 20, width: 20 },
+      bar:      { size: 15, width: 20 },
+      none:     { size: 20, width: 10 }
+    };
+    var ARROW_SCALE_REFERENCE_SIZE = 6;
+    var lastArrowScaleLineSize = pathSize;
+
+    function updateArrowStyleUI() {
+      var style = document.getElementById('lineArrowStyle').value;
+      var hideDims = style === 'none';
+      document.getElementById('arrowLengthControl').classList.toggle('hidden', hideDims);
+      document.getElementById('arrowWidthControl').classList.toggle('hidden', hideDims);
+      applyArrowStyleDefaults(style);
+    }
+
+    function applyArrowStyleDefaults(style) {
+      var defaults = ARROW_STYLE_DEFAULTS[style] || ARROW_STYLE_DEFAULTS.triangle;
+      var scale = pathSize / ARROW_SCALE_REFERENCE_SIZE;
+      document.getElementById('lineArrowSize').value = Math.round(defaults.size * scale);
+      document.getElementById('lineArrowWidth').value = Math.round(defaults.width * scale);
+      lastArrowScaleLineSize = pathSize;
+    }
+
+    function rescaleArrowDims() {
+      if (!lastArrowScaleLineSize) { lastArrowScaleLineSize = pathSize; return; }
+      var ratio = pathSize / lastArrowScaleLineSize;
+      if (ratio === 1) return;
+      var sizeInput = document.getElementById('lineArrowSize');
+      var widthInput = document.getElementById('lineArrowWidth');
+      sizeInput.value = Math.max(Number(sizeInput.min), Math.round(Number(sizeInput.value) * ratio));
+      widthInput.value = Math.max(Number(widthInput.min), Math.round(Number(widthInput.value) * ratio));
+      lastArrowScaleLineSize = pathSize;
+    }
+    updateArrowStyleUI();
+
+    function updateCanvasCursor() { updateToolUI(); }
+
+    document.querySelectorAll('input[name="radioGroup"]').forEach(function(radio) {
+      radio.addEventListener('change', function() {
+        document.querySelectorAll('.toggle-btn').forEach(label => label.classList.remove('active'));
+        document.querySelector(`label[for="${radio.id}"]`).classList.add('active');
+        if (editingText) commitTextEditor();
+        if (getSelectedTool() !== 'select') { selectedShape = null; selectDrag = null; drawPathsLayer(); }
+        updateToolUI();
+      });
+    });
+    updateToolUI();
+
+    var isPanning = false;
+    var panStartX = 0, panStartY = 0, panOriginX = 0, panOriginY = 0;
+    canvasWrapper.addEventListener('mousedown', function(event) {
+      if (event.button === 1 || (isPanZoomMode() && event.button === 0)) {
+        event.preventDefault();
+        isPanning = true;
+        panStartX = event.clientX;
+        panStartY = event.clientY;
+        panOriginX = panX;
+        panOriginY = panY;
+        canvasWrapper.style.cursor = 'grabbing';
+      }
+    });
+    window.addEventListener('mousemove', function(event) {
+      if (isPanning) {
+        panX = panOriginX + (event.clientX - panStartX);
+        panY = panOriginY + (event.clientY - panStartY);
+        applyTransform();
+      }
+    });
+    window.addEventListener('mouseup', function() {
+      if (isPanning) {
+        isPanning = false;
+        updateCanvasCursor();
+      }
+    });
+    window.addEventListener('resize', fitToScreen);
+    document.addEventListener('keydown', function(event) {
+      if (isTypingTarget(document.activeElement)) return;
+      if (event.key === '+' || event.key === '=') { zoomIn(); }
+      else if (event.key === '-' || event.key === '_') { zoomOut(); }
+      else if (event.key === '0') { fitToScreen(); }
+      else if (event.key === 'f' || event.key === 'F') { fitFieldRegion('full'); }
+      else if (event.key === '[') { fitFieldRegion('blue'); }
+      else if (event.key === ']') { fitFieldRegion('red'); }
+    });
+    var circles = [];
+    var paths = []; // For freehand drawing
+    var canvasStates = [];
+    var pathColor = "black"; // Default path color
+    var isDrawing = false;
+    var selectedCircle = null;
+    var currentLine = null;
+    var gridSize = 40;
+    // Defaults applied to a newly spawned ball, mirroring the same
+    // properties the shift+right-click ball menu lets you toggle after
+    // the fact (see BALL_PROP_TOGGLES).
+    let eggEnabled = false;
+    let jukeEnabled = false;
+    let bombEnabled = false;
+    let tagproEnabled = false;
+    
+    // Global variable: finalMapImage holds the loaded field.png (background)
+    var finalMapImage = null;
+    // Blank margin (in canvas pixels) around the field so users can draw/
+    // place markers outside its edges.
+    var MAP_MARGIN = 400;
+    var mapOffsetX = 0;
+    var mapOffsetY = 0;
+
+    // Background layer: map bitmap + balls. Expensive (a full-size
+    // drawImage of the baked map), so it's only touched on actual changes
+    // to those things - never on every mousemove of an in-progress stroke.
+    // Only the field bitmap itself - never balls/drawings, so this (the
+    // expensive full-canvas fillRect + drawImage of the field) only needs
+    // to run when the field is loaded.
+    function drawBackgroundLayer() {
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      if (finalMapImage) {
+        ctx.drawImage(finalMapImage, mapOffsetX, mapOffsetY, finalMapImage.width, finalMapImage.height);
+      }
+    }
+
+    // Runs `fn` with the paths canvas as the active drawing target, so the
+    // existing drawPaths/drawShapeObject/draw*Shape functions (which all
+    // close over the module-level `ctx`) paint onto it instead of the
+    // background canvas - swap-and-restore rather than threading a context
+    // parameter through every one of them.
+    function withPathsCtx(fn) {
+      var prevCtx = ctx;
+      ctx = pathsCtx;
+      try { fn(); } finally { ctx = prevCtx; }
+    }
+
+    // Drawing layer: freehand strokes + shapes, on its own transparent
+    // canvas stacked on top of the background. Cheap to clear+redraw on
+    // its own, which is what makes live shape-tool previews affordable -
+    // see previewShape below.
+    function drawPathsLayer() {
+      withPathsCtx(function() {
+        pathsCtx.clearRect(0, 0, pathsCanvas.width, pathsCanvas.height);
+        // Balls live on this cheap, always-redrawn layer too (on top of
+        // the map, under paths/shapes) so adding/moving/erasing one never
+        // has to touch drawBackgroundLayer's expensive full-map redraw.
+        drawCircles();
+        drawPaths();
+        drawSelectionOverlay();
+      });
+    }
+
+    // Full redraw of both layers - map/balls changed, or paths changed in
+    // a way that isn't a live in-progress preview (undo, clear, a shape
+    // just finished, ...).
+    function drawCanvas() {
+      drawBackgroundLayer();
+      drawPathsLayer();
+    }
+    function addCircle(color, withEgg, withJuke, withBomb, withTagpro) {
+  // Choose a random position within the field's own bounds (not the
+  // blank MAP_MARGIN drawing area around it) - falls back to the whole
+  // canvas if the field hasn't loaded yet.
+  var minX = finalMapImage ? mapOffsetX : 0;
+  var minY = finalMapImage ? mapOffsetY : 0;
+  var spanX = Math.max(1, (finalMapImage ? finalMapImage.width  : canvas.width)  - 40);
+  var spanY = Math.max(1, (finalMapImage ? finalMapImage.height : canvas.height) - 40);
+  var x = minX + Math.floor(Math.random() * spanX);
+  var y = minY + Math.floor(Math.random() * spanY);
+  var tileObj = {
+    x: x, y: y, color: color,
+    hasEgg: withEgg,
+    hasJuke: withJuke, hasBomb: withBomb, hasTagpro: withTagpro,
+  };
+  circles.push(tileObj);
+  drawPathsLayer();
 }
+
+function drawCircle(tileObj) {
+  let config = configMap;
+  if (tileObj.color === "egg") {
+    drawEggSprite(ctx, tileObj.x, tileObj.y, config.tileSize);
+    return;
+  }
+  // Determine which tile to draw for the circle based on its color.
+  let tileX, tileY;
+  if (tileObj.color === "red") {
+    tileX = 14; // Column 14 for red.
+    tileY = 0;  // Row 0 for red.
+  } else if (tileObj.color === "blue") {
+    tileX = 15; // Column 15 for blue.
+    tileY = 0;  // Row 0 for blue.
+  } else {
+    // Fallback to a default tile.
+    tileX = 0;
+    tileY = 0;
+  }
+  
+  // Draw the circle tile - or a plain team-colored disc while the texture
+  // pack is still loading (or failed to load).
+  if (images.tile) {
+    ctx.drawImage(
+      images.tile,                     // Tile sheet image.
+      tileX * config.tileSize,         // Source x.
+      tileY * config.tileSize,         // Source y.
+      config.tileSize, config.tileSize, // Source width & height.
+      tileObj.x, tileObj.y,            // Destination x & y.
+      config.tileSize, config.tileSize  // Destination width & height.
+    );
+  } else {
+    ctx.beginPath();
+    ctx.arc(tileObj.x + 20, tileObj.y + 20, 19, 0, Math.PI * 2);
+    ctx.fillStyle = tileObj.color;
+    ctx.fill();
+  }
+
+  // Carried egg - a smaller egg tucked against the ball's top-right, in
+  // roughly the spot StraTAGy draws a carried flag.
+  if (tileObj.hasEgg) {
+    drawEggSprite(ctx, tileObj.x + 22, tileObj.y - 8, 26);
+  }
+
+  // Powerup indicators (set via the shift+right-click ball properties
+  // menu). TagPro's real particle animations aren't in the static texture
+  // pack, so each gets its own static stand-in, drawn on top of the ball -
+  // matched to GrabTag client's own static base shapes (client/game/render/
+  // playerRenderer.js's drawPupBase), just without the particle emitters:
+  // - Juke Juice: a small badge of the juke pad's own art, nothing else - GrabTag draws no base shape
+  //   for this one either, only particles.
+  // - Tagpro: a solid green tint over the ball plus a 2px green outline,
+  //   not a ring.
+  // - Rolling Bomb: a solid yellow tint over the ball, not a white glow.
+  var cx = tileObj.x + 20, cy = tileObj.y + 20;
+
+  if (tileObj.hasJuke && images.tile) {
+    ctx.drawImage(images.tile, 12 * config.tileSize, 4 * config.tileSize, config.tileSize, config.tileSize,
+                   tileObj.x + 21, tileObj.y + 21, 18, 18);
+  }
+
+  if (tileObj.hasTagpro) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.25)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#00ff00';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if (tileObj.hasBomb) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var glow = ctx.createRadialGradient(cx, cy, 4, cx, cy, 26);
+    glow.addColorStop(0, '#ffffffcc');
+    glow.addColorStop(1, '#ffffff00');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 26, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawCircles() {
+  circles.forEach(function(circle) { drawCircle(circle); });
+}
+
+function drawRedCircle() {
+  addCircle("red", eggEnabled, jukeEnabled, bombEnabled, tagproEnabled);
+}
+
+// Function to draw a blue circle when the blue button is pressed.
+function drawBlueCircle() {
+  addCircle("blue", eggEnabled, jukeEnabled, bombEnabled, tagproEnabled);
+}
+
+// Loose egg - dropped at the 50 yard line (kickoff spot) rather than a
+// random spot like a ball, nudged a little if one is already sitting there.
+function drawEgg() {
+  var cx = finalMapImage ? mapOffsetX + finalMapImage.width / 2 : canvas.width / 2;
+  var cy = finalMapImage ? mapOffsetY + finalMapImage.height / 2 : canvas.height / 2;
+  var x = cx - 20, y = cy - 20;
+  while (circles.some(function(c) { return c.x === x && c.y === y; })) { x += 12; y += 12; }
+  circles.push({ x: x, y: y, color: "egg" });
+  drawPathsLayer();
+}
+
+// The egg, drawn procedurally (it isn't in the TagPro texture packs): a
+// gold, slightly tall oval with a highlight, filling a size x size box
+// whose top-left is (x, y) - the same footprint as a 40px ball tile.
+function drawEggSprite(c, x, y, size) {
+  var cx = x + size / 2, cy = y + size / 2;
+  var rx = size * 0.38, ry = size * 0.47;
+  c.save();
+  var grad = c.createRadialGradient(cx - rx * 0.35, cy - ry * 0.4, size * 0.04, cx, cy, ry * 1.1);
+  grad.addColorStop(0, '#fff6c2');
+  grad.addColorStop(0.45, '#f4c430');
+  grad.addColorStop(1, '#b8860b');
+  c.beginPath();
+  c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  c.fillStyle = grad;
+  c.fill();
+  c.lineWidth = Math.max(1, size / 26);
+  c.strokeStyle = '#6b4f00';
+  c.stroke();
+  c.restore();
+}
+
+// Egg art doesn't depend on the texture pack, so these can render before
+// (or without) it loading.
+function renderEggIcons() {
+  ['eggBallIcon', 'eggIcon', 'ballPropEggIcon'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    var iconCtx = el.getContext('2d');
+    iconCtx.clearRect(0, 0, el.width, el.height);
+    drawEggSprite(iconCtx, 0, 0, el.width);
+  });
+}
+
+function renderBallIcons() {
+  renderEggIcons();
+  var redIcon = document.getElementById('redBallIcon');
+  var blueIcon = document.getElementById('blueBallIcon');
+  if (!redIcon || !blueIcon) return;
+  var ts = configMap.tileSize;
+  [{ canvas: redIcon, tileX: 14, color: 'red' }, { canvas: blueIcon, tileX: 15, color: 'blue' }].forEach(function(entry) {
+    var iconCtx = entry.canvas.getContext('2d');
+    iconCtx.imageSmoothingEnabled = false;
+    iconCtx.clearRect(0, 0, entry.canvas.width, entry.canvas.height);
+    // Same plain-disc fallback drawCircle uses until the tile sheet loads.
+    if (!images.tile) {
+      iconCtx.beginPath();
+      iconCtx.arc(entry.canvas.width / 2, entry.canvas.height / 2, entry.canvas.width / 2 - 1, 0, Math.PI * 2);
+      iconCtx.fillStyle = entry.color;
+      iconCtx.fill();
+      return;
+    }
+    iconCtx.drawImage(images.tile, entry.tileX * ts, 0, ts, ts, 0, 0, entry.canvas.width, entry.canvas.height);
+  });
+}
+
+// Tile-sheet coordinates of each powerup's pad art - drawn once onto each
+// checkbox/button's own canvas so the pup-toggle controls show the actual
+// pad art instead of JJ/RB/TP text.
+var PROP_ICON_TILES = {
+  jukeIcon:               { x: 12, y: 4 },
+  bombIcon:               { x: 12, y: 5 },
+  tagproIcon:             { x: 12, y: 6 },
+  ballPropJukeIcon:       { x: 12, y: 4 },
+  ballPropBombIcon:       { x: 12, y: 5 },
+  ballPropTagproIcon:     { x: 12, y: 6 },
+};
+
+function renderPropIcons() {
+  if (!images.tile) return;
+  var ts = configMap.tileSize;
+  Object.keys(PROP_ICON_TILES).forEach(function(id) {
+    var canvas = document.getElementById(id);
+    if (!canvas) return;
+    var coord = PROP_ICON_TILES[id];
+    var iconCtx = canvas.getContext('2d');
+    iconCtx.imageSmoothingEnabled = false;
+    iconCtx.clearRect(0, 0, canvas.width, canvas.height);
+    iconCtx.drawImage(images.tile, coord.x * ts, coord.y * ts, ts, ts, 0, 0, canvas.width, canvas.height);
+  });
+}
+
+   
+    function drawPaths() {
+      // The text object currently being live-edited is skipped here - the
+      // fixed-position contenteditable overlay shows its in-progress
+      // content instead, and drawing both would double it up.
+      paths.forEach(function(p) { if (p !== editingText) drawShapeObject(p); });
+    }
+
+    function drawShapeObject(p) {
+      if (p.kind === 'rect') { drawRectShape(p); }
+      else if (p.kind === 'circle') { drawCircleShape(p); }
+      else if (p.kind === 'line') { drawLineShape(p); }
+      else if (p.kind === 'freehand') { drawFreehandShape(p); }
+      else if (p.kind === 'text') { drawTextShape(p); }
+    }
+
+    function drawFreehandShape(p) {
+      if (!p.points || p.points.length < 2) return;
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.size;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p.points[0].x, p.points[0].y);
+      for (var i = 1; i < p.points.length; i++) ctx.lineTo(p.points[i].x, p.points[i].y);
+      ctx.stroke();
+    }
+
+    function textFont(p) {
+      var size = p.fontSize || 24;
+      return (p.italic ? 'italic ' : '') + (p.bold ? 'bold ' : '') + size + 'px ' + (p.fontFamily || 'Arial');
+    }
+
+    function drawTextShape(p) {
+      if (!p.text) return;
+      ctx.font = textFont(p);
+      ctx.fillStyle = p.color;
+      ctx.textBaseline = 'top';
+      var size = p.fontSize || 24;
+      var lines = p.text.split('\n');
+      lines.forEach(function(line, i) {
+        var ly = p.y + i * size * 1.2;
+        ctx.fillText(line, p.x, ly);
+        if (p.underline) {
+          var w = ctx.measureText(line).width;
+          ctx.beginPath();
+          ctx.lineWidth = Math.max(1, size / 16);
+          ctx.strokeStyle = p.color;
+          ctx.moveTo(p.x, ly + size * 1.05);
+          ctx.lineTo(p.x + w, ly + size * 1.05);
+          ctx.stroke();
+        }
+      });
+    }
+
+    // Bounding box for a text object, in canvas coordinates - measured
+    // with the object's own font so it tracks size/bold/family/wrapping.
+    function textBoundingBox(p) {
+      ctx.font = textFont(p);
+      var size = p.fontSize || 24;
+      var lines = (p.text || '').split('\n');
+      var w = 0;
+      lines.forEach(function(line) { w = Math.max(w, ctx.measureText(line).width); });
+      return { x: p.x, y: p.y, w: Math.max(w, 20), h: Math.max(size * 1.2, lines.length * size * 1.2) };
+    }
+
+    // Normalizes any CSS color string (named color, hex, ...) to #rrggbb
+    // for the <input type="color"> swatches, which only accept that form.
+    function toHexColor(cssColor) {
+      var probe = document.createElement('div');
+      probe.style.color = cssColor;
+      document.body.appendChild(probe);
+      var rgb = getComputedStyle(probe).color;
+      document.body.removeChild(probe);
+      var m = rgb.match(/\d+/g);
+      if (!m) return '#000000';
+      return '#' + m.slice(0, 3).map(function(v) { return ('0' + parseInt(v, 10).toString(16)).slice(-2); }).join('');
+    }
+
+    function drawRectShape(p) {
+      var x = Math.min(p.x1, p.x2), y = Math.min(p.y1, p.y2);
+      var w = Math.abs(p.x2 - p.x1), h = Math.abs(p.y2 - p.y1);
+      if (p.fill) {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(x, y, w, h);
+      } else {
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size;
+        ctx.strokeRect(x, y, w, h);
+      }
+    }
+
+    function drawCircleShape(p) {
+      var cx = (p.x1 + p.x2) / 2, cy = (p.y1 + p.y2) / 2;
+      var rx = Math.abs(p.x2 - p.x1) / 2, ry = Math.abs(p.y2 - p.y1) / 2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      if (p.fill) {
+        ctx.fillStyle = p.color;
+        ctx.fill();
+      } else {
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size;
+        ctx.stroke();
+      }
+    }
+
+    // How far back from the tip each style's shape actually covers the
+    // line's centerline, as a fraction of arrow.size. Filled shapes that
+    // taper to a point at -size (triangle/diamond/dot) cover the full run,
+    // so the line can be trimmed underneath them entirely. The barbed head
+    // has a concave notch at -0.6*size, so trimming past that would leave
+    // a sliver of bare centerline showing inside the notch. Stroke-only
+    // marks (open/bar) don't cover the line at all, so the line must run
+    // all the way to the tip or a gap would show.
+    var ARROWHEAD_LINE_PULLBACK = {
+      triangle: 1,
+      diamond: 1,
+      dot: 1,
+      barbed: 0.6,
+      open: 0,
+      bar: 0,
+      none: 0
+    };
+
+    function drawLineShape(p) {
+      var arrowOn = p.arrow && p.arrow.enabled;
+      var angleEnd = Math.atan2(p.y2 - p.y1, p.x2 - p.x1);
+      var angleStart = angleEnd + Math.PI;
+      var arrowAtEnd = arrowOn && (p.arrow.position === 'end' || p.arrow.position === 'both');
+      var arrowAtStart = arrowOn && (p.arrow.position === 'start' || p.arrow.position === 'both');
+      var pullbackFraction = arrowOn ? (ARROWHEAD_LINE_PULLBACK[p.arrow.style] || 0) : 0;
+
+      // Trim the stroked line under each arrowhead by exactly the amount
+      // that arrowhead's shape covers, so the tip always lands on the
+      // drawn endpoint with no gap and no bare line poking through.
+      var lineX1 = p.x1, lineY1 = p.y1, lineX2 = p.x2, lineY2 = p.y2;
+      var lineLength = Math.hypot(p.x2 - p.x1, p.y2 - p.y1);
+      if (arrowAtEnd) {
+        var pullEnd = Math.min(p.arrow.size * pullbackFraction, lineLength);
+        lineX2 = p.x2 - Math.cos(angleEnd) * pullEnd;
+        lineY2 = p.y2 - Math.sin(angleEnd) * pullEnd;
+      }
+      if (arrowAtStart) {
+        var pullStart = Math.min(p.arrow.size * pullbackFraction, lineLength);
+        lineX1 = p.x1 - Math.cos(angleStart) * pullStart;
+        lineY1 = p.y1 - Math.sin(angleStart) * pullStart;
+      }
+
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.size;
+      ctx.beginPath();
+      ctx.moveTo(lineX1, lineY1);
+      ctx.lineTo(lineX2, lineY2);
+      ctx.stroke();
+
+      if (arrowAtEnd) {
+        drawArrowhead(p.x2, p.y2, angleEnd, p.arrow.size, p.arrow.width, p.arrow.style, p.color);
+      }
+      if (arrowAtStart) {
+        drawArrowhead(p.x1, p.y1, angleStart, p.arrow.size, p.arrow.width, p.arrow.style, p.color);
+      }
+    }
+
+    var ARROWHEAD_DRAWERS = {
+      open: function(size, width) {
+        ctx.lineWidth = Math.max(2, width * 0.5);
+        ctx.lineJoin = 'round';
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-size, width);
+        ctx.lineTo(0, 0);
+        ctx.lineTo(-size, -width);
+        ctx.stroke();
+      },
+      barbed: function(size, width) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-size, width);
+        ctx.lineTo(-size * 0.6, 0);
+        ctx.lineTo(-size, -width);
+        ctx.closePath();
+        ctx.fill();
+      },
+      triangle: function(size, width) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-size, width);
+        ctx.lineTo(-size, -width);
+        ctx.closePath();
+        ctx.fill();
+      },
+      diamond: function(size, width) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-size * 0.5, width);
+        ctx.lineTo(-size, 0);
+        ctx.lineTo(-size * 0.5, -width);
+        ctx.closePath();
+        ctx.fill();
+      },
+      dot: function(size, width) {
+        ctx.beginPath();
+        ctx.ellipse(-size * 0.5, 0, size * 0.5, width, 0, 0, Math.PI * 2);
+        ctx.fill();
+      },
+      bar: function(size, width) {
+        ctx.lineWidth = Math.max(2, size * 0.3);
+        ctx.beginPath();
+        ctx.moveTo(0, width);
+        ctx.lineTo(0, -width);
+        ctx.stroke();
+      },
+      none: function() {}
+    };
+
+    function drawArrowhead(x, y, angle, size, width, style, color) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      ctx.fillStyle = color;
+      ctx.strokeStyle = color;
+      var draw = ARROWHEAD_DRAWERS[style] || ARROWHEAD_DRAWERS.triangle;
+      draw(size, width);
+      ctx.restore();
+    }
+    
+    function clearPaths() { paths = []; drawPathsLayer(); }
+    function clearCanvas() { circles = []; paths = []; drawPathsLayer(); }
+    function updatePathSize() {
+      pathSize = Number(document.getElementById("sizeInput").value);
+      rescaleArrowDims();
+    }
+    function updatePathColor(color) {
+      pathColor = color;
+      renderPaletteColors();
+      var target = currentTextTarget();
+      if (target) {
+        target.color = color;
+        if (editingText === target) textEditOverlayEl.style.color = color;
+        drawPathsLayer();
+      }
+    }
+    // Single source of truth for every button in #colors - both the
+    // original hardcoded defaults and anything added via the picker below,
+    // so the palette JSON editor (see togglePaletteEditor and friends)
+    // reflects and can rewrite the whole palette, not just custom additions.
+    // Same key as StraTAGy - both are served from bambitp.github.io, so a
+    // palette saved in one shows up in the other.
+    var CUSTOM_COLORS_CACHE_KEY = 'stratagyPaletteColors';
+    var paletteColors = [
+      { name: 'Red', color: 'red' },
+      { name: 'Blue', color: 'blue' },
+      { name: 'Green', color: 'green' },
+      { name: 'Yellow', color: 'yellow' },
+      { name: 'Pink', color: 'pink' },
+      { name: 'Orange', color: 'orange' },
+      { name: 'Purple', color: 'purple' },
+      { name: 'Gray', color: 'gray' },
+      { name: 'Black', color: 'black' },
+      { name: 'White', color: 'white' },
+    ];
+
+    function renderPaletteColors() {
+      var colorsDiv = document.getElementById("colors");
+      colorsDiv.innerHTML = "";
+      paletteColors.forEach(function(entry) {
+        var isWhite = ['white', '#fff', '#ffffff'].indexOf(entry.color.trim().toLowerCase()) !== -1;
+        var colorButton = document.createElement("button");
+        colorButton.style.padding = "4px 10px";
+        colorButton.style.fontSize = "13px";
+        colorButton.style.color = isWhite ? "black" : "white";
+        colorButton.style.border = isWhite ? "1px solid black" : "none";
+        colorButton.style.borderRadius = "4px";
+        colorButton.style.cursor = "pointer";
+        colorButton.style.backgroundColor = entry.color;
+        // Two-tone ring (white then black) instead of a single-color
+        // outline, so the "currently selected" indicator stays visible no
+        // matter what color the button itself is - this replaces the old
+        // #colorDisplay swatch that used to show the pick separately.
+        if (entry.color === pathColor) {
+          colorButton.style.boxShadow = '0 0 0 2px #fff, 0 0 0 4px #000';
+        }
+        colorButton.onclick = function() { updatePathColor(entry.color); };
+        colorButton.appendChild(document.createTextNode(entry.name));
+        colorsDiv.appendChild(colorButton);
+      });
+    }
+
+    function colorAdd(colorInput) {
+      var colorInputElem = document.getElementById(colorInput);
+      var colorName = document.getElementById("colorName");
+      paletteColors.push({ name: colorName.value, color: colorInputElem.value });
+      renderPaletteColors();
+    }
+
+    // ---- palette JSON editor (Info modal's Palette button) -------------
+    function togglePaletteEditor() {
+      var editor = document.getElementById('paletteEditor');
+      var opening = editor.classList.contains('palette-editor-hidden');
+      editor.classList.toggle('palette-editor-hidden');
+      if (opening) {
+        document.getElementById('paletteJsonTextbox').value = JSON.stringify(paletteColors, null, 2);
+        document.getElementById('paletteJsonError').textContent = '';
+      }
+    }
+
+    // Only applies the edit once it parses as an array of {name, color}
+    // objects - typing mid-edit produces plenty of momentarily-invalid
+    // JSON, and applying that would wipe the live palette on every
+    // keystroke instead of just on a good edit.
+    function applyPaletteJsonFromTextarea() {
+      var textbox = document.getElementById('paletteJsonTextbox');
+      var errorEl = document.getElementById('paletteJsonError');
+      var parsed;
+      try {
+        parsed = JSON.parse(textbox.value);
+      } catch (e) {
+        errorEl.textContent = 'Invalid JSON: ' + e.message;
+        return;
+      }
+      if (!Array.isArray(parsed) || !parsed.every(function(entry) {
+        return entry && typeof entry.name === 'string' && typeof entry.color === 'string';
+      })) {
+        errorEl.textContent = 'Expected an array of {"name": "...", "color": "..."} objects.';
+        return;
+      }
+      errorEl.textContent = '';
+      paletteColors = parsed;
+      renderPaletteColors();
+    }
+
+    function saveColorsToCache() {
+      localStorage.setItem(CUSTOM_COLORS_CACHE_KEY, JSON.stringify(paletteColors));
+    }
+
+    function copyPaletteJson() {
+      navigator.clipboard.writeText(document.getElementById('paletteJsonTextbox').value);
+    }
+
+    function downloadPaletteJson() {
+      var blob = new Blob([JSON.stringify(paletteColors, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = 'strateggy-colors.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function uploadPaletteJson(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function() {
+        document.getElementById('paletteJsonTextbox').value = reader.result;
+        applyPaletteJsonFromTextarea();
+      };
+      reader.readAsText(file);
+      event.target.value = '';
+    }
+    
+    // Index of the ball whose 40x40 box contains the event's canvas coords,
+    // or -1 - shared hit-test for removeCircle/toggleCircleFlag.
+    function circleIndexAt(event) {
+  var coords = getCanvasCoords(event);
+  var mouseX = coords.x;
+  var mouseY = coords.y;
+  for (var i = 0; i < circles.length; i++) {
+    var square = circles[i];
+    // Check if the mouse is within the 40x40 square
+    if (
+      mouseX >= square.x && mouseX <= square.x + 40 &&
+      mouseY >= square.y && mouseY <= square.y + 40
+    ) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+    // Right-click a ball to erase it - returns whether a ball was hit.
+    function removeCircle(event) {
+  var i = circleIndexAt(event);
+  if (i === -1) return false;
+  circles.splice(i, 1);
+  drawPathsLayer();
+  return true;
+}
+
+    // ---- shift+right-click ball properties menu ------------------------
+    // A small popup with a red/green toggle per boolean (carried egg + the
+    // three powerup badges drawn in drawCircle) - lets several be set on one ball
+    // at once instead of a single click cycling through them one at a time.
+    var ballPropsMenuEl = document.getElementById('ballPropsMenu');
+    var ballPropsTarget = null; // the circle object the open menu edits
+
+    var BALL_PROP_TOGGLES = [
+      { id: 'ballPropEgg',        key: 'hasEgg' },
+      { id: 'ballPropJuke',       key: 'hasJuke' },
+      { id: 'ballPropBomb',       key: 'hasBomb' },
+      { id: 'ballPropTagpro',     key: 'hasTagpro' },
+    ];
+
+    function refreshBallPropsMenu() {
+      if (!ballPropsTarget) return;
+      BALL_PROP_TOGGLES.forEach(function(prop) {
+        var btn = document.getElementById(prop.id);
+        var on = !!ballPropsTarget[prop.key];
+        btn.classList.toggle('on', on);
+      });
+    }
+
+    function openBallPropsMenu(circle, clientX, clientY) {
+      ballPropsTarget = circle;
+      refreshBallPropsMenu();
+      ballPropsMenuEl.style.left = clientX + 'px';
+      ballPropsMenuEl.style.top = clientY + 'px';
+      ballPropsMenuEl.style.display = 'block';
+    }
+
+    function closeBallPropsMenu() {
+      ballPropsTarget = null;
+      ballPropsMenuEl.style.display = 'none';
+    }
+
+    BALL_PROP_TOGGLES.forEach(function(prop) {
+      document.getElementById(prop.id).addEventListener('click', function() {
+        if (!ballPropsTarget) return;
+        ballPropsTarget[prop.key] = !ballPropsTarget[prop.key];
+        refreshBallPropsMenu();
+        drawPathsLayer();
+      });
+    });
+
+    document.addEventListener('mousedown', function(event) {
+      if (ballPropsMenuEl.style.display === 'block' && !ballPropsMenuEl.contains(event.target)) {
+        closeBallPropsMenu();
+      }
+    });
+
+function selectCircle(event) {
+  var coords = getCanvasCoords(event);
+  var mouseX = coords.x;
+  var mouseY = coords.y;
+  for (var i = 0; i < circles.length; i++) {
+    var circle = circles[i];
+    // Calculate the center of the 38px circle (top-left + radius of 19)
+    var centerX = circle.x + 19;
+    var centerY = circle.y + 19;
+    var dx = mouseX - centerX;
+    var dy = mouseY - centerY;
+    var distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance <= 19) {
+      selectedCircle = circle;
+      break;
+    }
+  }
+}
+ 
+function moveCircle(event) {
+  if (selectedCircle) {
+    var coords = getCanvasCoords(event);
+    // Keep the mouse at the center of the square by subtracting 20.
+    selectedCircle.x = coords.x - 20;
+    selectedCircle.y = coords.y - 20;
+    drawPathsLayer();
+  }
+}
+canvas.addEventListener("contextmenu", function(event) {
+  event.preventDefault();
+  if (isPanZoomMode()) return;
+  if (event.shiftKey) {
+    var i = circleIndexAt(event);
+    if (i !== -1 && circles[i].color !== "egg") openBallPropsMenu(circles[i], event.clientX, event.clientY);
+    return;
+  }
+  var coords = getCanvasCoords(event);
+  var textHit = findTextAt(coords.x, coords.y);
+  if (textHit) {
+    selectedShape = textHit;
+    openTextEditor(textHit);
+    return;
+  }
+  closeBallPropsMenu();
+  removeCircle(event);
+});
 function undo() {
-  if (paths.length > 0) {
-    paths.pop(); // Remove the last path
+      if (paths.length > 0) { paths.pop(); drawPathsLayer(); }
+    }
+    
+    var isFreeDrawing = false;
 
-    // Clear the canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    function startFreeDrawing(event) {
+      if (event.button === 0 && document.getElementById("drawCheckbox").checked) {
+        isFreeDrawing = true;
+        var coords = getCanvasCoords(event);
+        // Keeps raw points (not just a Path2D) so the Select tool can move/
+        // resize a finished stroke later - Path2D is write-only, there's
+        // no way to read a point back out of one once built.
+        paths.push({ kind: 'freehand', color: pathColor, size: pathSize, points: [{ x: coords.x, y: coords.y }] });
+      }
+    }
 
-    // Redraw the balls
-    drawCircles();
+    function drawFreehandLine(event) {
+      if (isFreeDrawing) {
+        var lastPath = paths[paths.length - 1];
+        var coords = getCanvasCoords(event);
+        var prev = lastPath.points[lastPath.points.length - 1];
+        lastPath.points.push({ x: coords.x, y: coords.y });
+        // Stroke only the new segment onto the paths layer - no clear, no
+        // touching the background canvas, so this stays cheap no matter
+        // how large the map bitmap underneath is.
+        withPathsCtx(function() {
+          ctx.strokeStyle = lastPath.color;
+          ctx.lineWidth = lastPath.size;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(coords.x, coords.y);
+          ctx.stroke();
+        });
+      }
+    }
 
-    // Redraw the remaining paths
-    drawPaths();
+    function finishFreeDrawing(event) {
+      isFreeDrawing = false;
+    }
+
+    // =====================================================
+    // SHAPE TOOLS (Rectangle / Circle / Line)
+    // =====================================================
+    function getActiveShapeTool() {
+      if (document.getElementById('rectCheckbox').checked) return 'rect';
+      if (document.getElementById('circleCheckbox').checked) return 'circle';
+      if (document.getElementById('lineCheckbox').checked) return 'line';
+      return null;
+    }
+
+    function constrainAspect(x1, y1, x2, y2) {
+      var dx = x2 - x1, dy = y2 - y1;
+      var d = Math.max(Math.abs(dx), Math.abs(dy));
+      return {
+        x: x1 + (dx < 0 ? -d : d),
+        y: y1 + (dy < 0 ? -d : d)
+      };
+    }
+
+    function buildShapeObject(tool, x1, y1, x2, y2) {
+      var size = pathSize, color = pathColor;
+      if (tool === 'rect') {
+        return { kind: 'rect', color: color, size: size, fill: document.getElementById('rectFillToggle').checked, x1: x1, y1: y1, x2: x2, y2: y2 };
+      }
+      if (tool === 'circle') {
+        return { kind: 'circle', color: color, size: size, fill: document.getElementById('circleFillToggle').checked, x1: x1, y1: y1, x2: x2, y2: y2 };
+      }
+      return {
+        kind: 'line', color: color, size: size, x1: x1, y1: y1, x2: x2, y2: y2,
+        arrow: {
+          enabled: document.getElementById('lineArrowToggle').checked,
+          position: document.getElementById('lineArrowPosition').value,
+          size: Number(document.getElementById('lineArrowSize').value),
+          width: Number(document.getElementById('lineArrowWidth').value),
+          style: document.getElementById('lineArrowStyle').value
+        }
+      };
+    }
+
+    function shapeEndPoint(tool, x1, y1, x2, y2) {
+      if (tool === 'rect' && document.getElementById('rectSquareToggle').checked) return constrainAspect(x1, y1, x2, y2);
+      if (tool === 'circle' && document.getElementById('circleCircleToggle').checked) return constrainAspect(x1, y1, x2, y2);
+      return { x: x2, y: y2 };
+    }
+
+    var isDrawingShape = false, shapeStartX = 0, shapeStartY = 0;
+
+    function startShape(event) {
+      var tool = getActiveShapeTool();
+      if (event.button !== 0 || !tool) return;
+      isDrawingShape = true;
+      var coords = getCanvasCoords(event);
+      shapeStartX = coords.x;
+      shapeStartY = coords.y;
+    }
+
+    function previewShape(event) {
+      if (!isDrawingShape) return;
+      var tool = getActiveShapeTool();
+      var coords = getCanvasCoords(event);
+      var end = shapeEndPoint(tool, shapeStartX, shapeStartY, coords.x, coords.y);
+      // Only the (cheap, transparent) paths layer needs to be redrawn for
+      // a live preview - the background map/balls never change here, so
+      // drawBackgroundLayer() is never called on every mousemove anymore.
+      drawPathsLayer();
+      withPathsCtx(function() {
+        drawShapeObject(buildShapeObject(tool, shapeStartX, shapeStartY, end.x, end.y));
+      });
+    }
+
+    function finishShape(event) {
+      if (!isDrawingShape) return;
+      isDrawingShape = false;
+      var tool = getActiveShapeTool();
+      var coords = getCanvasCoords(event);
+      var end = shapeEndPoint(tool, shapeStartX, shapeStartY, coords.x, coords.y);
+      paths.push(buildShapeObject(tool, shapeStartX, shapeStartY, end.x, end.y));
+      drawPathsLayer();
+    }
+
+    // =====================================================
+    // TEXT TOOL (click to place + type, right-click an existing box to
+    // edit) - text objects live in the same `paths` array/layer as
+    // strokes and shapes, drawn by drawTextShape above.
+    // =====================================================
+    var textDefaults = { fontFamily: 'Arial', fontSize: 24, bold: false, italic: false, underline: false };
+    var editingText  = null; // the text path currently open in textEditOverlayEl, or null
+
+    var textEditOverlayEl   = document.getElementById('textEditOverlay');
+    var textFontFamilyEl    = document.getElementById('textFontFamily');
+    var textFontSizeEl      = document.getElementById('textFontSize');
+    var textBoldToggleEl    = document.getElementById('textBoldToggle');
+    var textItalicToggleEl  = document.getElementById('textItalicToggle');
+    var textUnderlineToggleEl = document.getElementById('textUnderlineToggle');
+
+    // The text object the sidebar's font/size/style controls currently
+    // act on: whichever is being typed into, else whichever the Select
+    // tool has selected (if it's a text box), else null (controls just
+    // set defaults for the next new text object).
+    function currentTextTarget() {
+      if (editingText) return editingText;
+      if (selectedShape && selectedShape.kind === 'text') return selectedShape;
+      return null;
+    }
+
+    function positionTextEditor(p) {
+      var pos = canvasToClient(p.x, p.y);
+      textEditOverlayEl.style.left = pos.left + 'px';
+      textEditOverlayEl.style.top = pos.top + 'px';
+      textEditOverlayEl.style.fontFamily = p.fontFamily || 'Arial';
+      textEditOverlayEl.style.fontSize = Math.max(6, (p.fontSize || 24) * pos.scale) + 'px';
+      textEditOverlayEl.style.fontWeight = p.bold ? 'bold' : 'normal';
+      textEditOverlayEl.style.fontStyle = p.italic ? 'italic' : 'normal';
+      textEditOverlayEl.style.textDecoration = p.underline ? 'underline' : 'none';
+      textEditOverlayEl.style.color = p.color;
+    }
+
+    function refreshTextSettingsPanel() {
+      var target = currentTextTarget();
+      var vals = target || textDefaults;
+      textFontFamilyEl.value = vals.fontFamily;
+      textFontSizeEl.value = vals.fontSize;
+      textBoldToggleEl.checked = !!vals.bold;
+      textItalicToggleEl.checked = !!vals.italic;
+      textUnderlineToggleEl.checked = !!vals.underline;
+    }
+
+    function applyTextSettingsChange() {
+      textDefaults.fontFamily = textFontFamilyEl.value;
+      textDefaults.fontSize   = Number(textFontSizeEl.value) || 24;
+      textDefaults.bold       = textBoldToggleEl.checked;
+      textDefaults.italic     = textItalicToggleEl.checked;
+      textDefaults.underline  = textUnderlineToggleEl.checked;
+      var target = currentTextTarget();
+      if (target) {
+        target.fontFamily = textDefaults.fontFamily;
+        target.fontSize   = textDefaults.fontSize;
+        target.bold       = textDefaults.bold;
+        target.italic     = textDefaults.italic;
+        target.underline  = textDefaults.underline;
+        if (editingText === target) positionTextEditor(target);
+        drawPathsLayer();
+      }
+    }
+    [textFontFamilyEl, textFontSizeEl].forEach(function(el) { el.addEventListener('input', applyTextSettingsChange); });
+    [textBoldToggleEl, textItalicToggleEl, textUnderlineToggleEl].forEach(function(el) { el.addEventListener('change', applyTextSettingsChange); });
+
+    function openTextEditor(p) {
+      if (editingText && editingText !== p) commitTextEditor();
+      editingText = p;
+      textEditOverlayEl.textContent = p.text || '';
+      textEditOverlayEl.classList.remove('hidden');
+      positionTextEditor(p);
+      refreshTextSettingsPanel();
+      updateToolUI();
+      drawPathsLayer();
+      textEditOverlayEl.focus();
+      // Put the caret at the end of the existing text rather than the start.
+      var range = document.createRange();
+      range.selectNodeContents(textEditOverlayEl);
+      range.collapse(false);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function commitTextEditor() {
+      if (!editingText) return;
+      var target = editingText;
+      target.text = textEditOverlayEl.innerText.replace(/\n$/, '');
+      editingText = null;
+      textEditOverlayEl.classList.add('hidden');
+      if (!target.text.trim()) {
+        var idx = paths.indexOf(target);
+        if (idx !== -1) paths.splice(idx, 1);
+        if (selectedShape === target) selectedShape = null;
+      }
+      updateToolUI();
+      drawPathsLayer();
+    }
+
+    textEditOverlayEl.addEventListener('blur', commitTextEditor);
+    textEditOverlayEl.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape') { event.preventDefault(); textEditOverlayEl.blur(); }
+      event.stopPropagation(); // don't let typing trigger tool hotkeys/zoom/undo
+    });
+    textEditOverlayEl.addEventListener('input', function() {
+      if (editingText) positionTextEditor(editingText); // re-measure as size/content changes
+    });
+
+    function placeNewText(event) {
+      var coords = getCanvasCoords(event);
+      var obj = {
+        kind: 'text', x: coords.x, y: coords.y, text: '', color: pathColor,
+        fontFamily: textDefaults.fontFamily, fontSize: textDefaults.fontSize,
+        bold: textDefaults.bold, italic: textDefaults.italic, underline: textDefaults.underline,
+      };
+      paths.push(obj);
+      openTextEditor(obj);
+    }
+
+    // =====================================================
+    // SELECT TOOL - move/resize any drawing (text, strokes, shapes), never
+    // balls. Kinds share one geometry model where possible (x1,y1,x2,y2
+    // for rect/circle/line; points[] for freehand; x,y+fontSize for text)
+    // so move/resize logic below can stay generic across all of them.
+    // =====================================================
+    var selectedShape = null; // a `paths` entry, or null
+    var selectDrag     = null; // { mode: 'move'|'resize', ... } while dragging
+
+    function pointsBoundingBox(points) {
+      var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      points.forEach(function(pt) {
+        minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y);
+        maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y);
+      });
+      return { x: minX, y: minY, w: Math.max(1, maxX - minX), h: Math.max(1, maxY - minY) };
+    }
+
+    function shapeBoundingBox(p) {
+      if (p.kind === 'text') return textBoundingBox(p);
+      if (p.kind === 'freehand') return pointsBoundingBox(p.points);
+      return { x: Math.min(p.x1, p.x2), y: Math.min(p.y1, p.y2), w: Math.max(1, Math.abs(p.x2 - p.x1)), h: Math.max(1, Math.abs(p.y2 - p.y1)) };
+    }
+
+    function shapeContainsPoint(p, x, y) {
+      var bbox = shapeBoundingBox(p);
+      var pad = (p.kind === 'line' || p.kind === 'freehand') ? Math.max(8, p.size || 4) : 2;
+      return x >= bbox.x - pad && x <= bbox.x + bbox.w + pad && y >= bbox.y - pad && y <= bbox.y + bbox.h + pad;
+    }
+
+    function findShapeAt(x, y) {
+      for (var i = paths.length - 1; i >= 0; i--) {
+        if (shapeContainsPoint(paths[i], x, y)) return paths[i];
+      }
+      return null;
+    }
+
+    function findTextAt(x, y) {
+      for (var i = paths.length - 1; i >= 0; i--) {
+        if (paths[i].kind === 'text' && shapeContainsPoint(paths[i], x, y)) return paths[i];
+      }
+      return null;
+    }
+
+    var RESIZE_ANCHORS = { nw: 'se', ne: 'sw', sw: 'ne', se: 'nw' };
+
+    function handlePoint(bbox, name) {
+      return {
+        x: name.indexOf('w') !== -1 ? bbox.x : bbox.x + bbox.w,
+        y: name.indexOf('n') !== -1 ? bbox.y : bbox.y + bbox.h
+      };
+    }
+
+    function handleHitAt(bbox, x, y) {
+      var names = ['nw', 'ne', 'sw', 'se'];
+      for (var i = 0; i < names.length; i++) {
+        var pt = handlePoint(bbox, names[i]);
+        if (Math.abs(pt.x - x) <= 10 && Math.abs(pt.y - y) <= 10) return names[i];
+      }
+      return null;
+    }
+
+    function cloneShapeGeom(p) {
+      if (p.kind === 'text') return { x: p.x, y: p.y, fontSize: p.fontSize || 24 };
+      if (p.kind === 'freehand') return { points: p.points.map(function(pt) { return { x: pt.x, y: pt.y }; }) };
+      return { x1: p.x1, y1: p.y1, x2: p.x2, y2: p.y2 };
+    }
+
+    function translateShape(p, dx, dy) {
+      if (p.kind === 'text') { p.x += dx; p.y += dy; return; }
+      if (p.kind === 'freehand') { p.points.forEach(function(pt) { pt.x += dx; pt.y += dy; }); return; }
+      p.x1 += dx; p.y1 += dy; p.x2 += dx; p.y2 += dy;
+    }
+
+    function applyResizeFromDrag(p, drag, mouseX, mouseY) {
+      var anchor = handlePoint(drag.origBBox, RESIZE_ANCHORS[drag.handle]);
+      var newW = Math.max(5, Math.abs(mouseX - anchor.x));
+      var newH = Math.max(5, Math.abs(mouseY - anchor.y));
+      var newX = Math.min(anchor.x, mouseX);
+      var newY = Math.min(anchor.y, mouseY);
+      var sx = newW / drag.origBBox.w;
+      var sy = newH / drag.origBBox.h;
+      function mapX(x) { return newX + (x - drag.origBBox.x) * sx; }
+      function mapY(y) { return newY + (y - drag.origBBox.y) * sy; }
+
+      if (p.kind === 'text') {
+        p.x = mapX(drag.origGeom.x);
+        p.y = mapY(drag.origGeom.y);
+        p.fontSize = Math.max(6, Math.round(drag.origGeom.fontSize * ((sx + sy) / 2)));
+        textFontSizeEl.value = p.fontSize;
+      } else if (p.kind === 'freehand') {
+        p.points = drag.origGeom.points.map(function(pt) { return { x: mapX(pt.x), y: mapY(pt.y) }; });
+      } else {
+        p.x1 = mapX(drag.origGeom.x1); p.y1 = mapY(drag.origGeom.y1);
+        p.x2 = mapX(drag.origGeom.x2); p.y2 = mapY(drag.origGeom.y2);
+      }
+    }
+
+    function drawSelectionOverlay() {
+      if (!selectedShape) return;
+      var b = shapeBoundingBox(selectedShape);
+      var box = { x: b.x - 4, y: b.y - 4, w: b.w + 8, h: b.h + 8 };
+      ctx.save();
+      ctx.strokeStyle = '#4da3ff';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([5, 4]);
+      ctx.strokeRect(box.x, box.y, box.w, box.h);
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#4da3ff';
+      ['nw', 'ne', 'sw', 'se'].forEach(function(name) {
+        var pt = handlePoint(box, name);
+        ctx.fillRect(pt.x - 5, pt.y - 5, 10, 10);
+      });
+      ctx.restore();
+    }
+
+    function startSelectDrag(event) {
+      var coords = getCanvasCoords(event);
+      if (selectedShape) {
+        var expanded = shapeBoundingBox(selectedShape);
+        expanded = { x: expanded.x - 4, y: expanded.y - 4, w: expanded.w + 8, h: expanded.h + 8 };
+        var handle = handleHitAt(expanded, coords.x, coords.y);
+        if (handle) {
+          selectDrag = { mode: 'resize', handle: handle, origBBox: shapeBoundingBox(selectedShape), origGeom: cloneShapeGeom(selectedShape) };
+          return;
+        }
+      }
+      var hit = findShapeAt(coords.x, coords.y);
+      selectedShape = hit;
+      selectDrag = hit ? { mode: 'move', lastX: coords.x, lastY: coords.y } : null;
+      refreshTextSettingsPanel();
+      updateToolUI();
+      drawPathsLayer();
+    }
+
+    function updateSelectDrag(event) {
+      if (!selectDrag || !selectedShape) return;
+      var coords = getCanvasCoords(event);
+      if (selectDrag.mode === 'move') {
+        translateShape(selectedShape, coords.x - selectDrag.lastX, coords.y - selectDrag.lastY);
+        selectDrag.lastX = coords.x; selectDrag.lastY = coords.y;
+      } else {
+        applyResizeFromDrag(selectedShape, selectDrag, coords.x, coords.y);
+      }
+      drawPathsLayer();
+    }
+
+    function finishSelectDrag() { selectDrag = null; }
+
+    canvas.addEventListener("mousedown", function(event) {
+      if (isPanZoomMode()) return;
+      if (event.button !== 0) return;
+      var tool = getSelectedTool();
+      if (tool === 'select') { startSelectDrag(event); return; }
+      if (tool === 'text') {
+        // Without this, the browser's default mousedown behavior (shifting
+        // focus away, since the canvas itself isn't focusable) runs right
+        // after our handler and immediately blurs the editor placeNewText
+        // just focused - which fires commitTextEditor before a single
+        // keystroke lands, and sends every subsequent keypress to the
+        // document-level tool-hotkey listeners instead of the text box.
+        event.preventDefault();
+        placeNewText(event);
+        return;
+      }
+      selectCircle(event);
+
+      if (!selectedCircle) {
+        if (tool === 'draw') {
+          startFreeDrawing(event);
+        } else if (getActiveShapeTool()) {
+          startShape(event);
+        }
+      }
+    });
+
+    canvas.addEventListener("mousemove", function(event) {
+      if (isPanZoomMode()) return;
+      if (selectDrag) {
+        updateSelectDrag(event);
+      } else if (selectedCircle) {
+        moveCircle(event);
+      } else if (isFreeDrawing) {
+        drawFreehandLine(event);
+      } else if (isDrawingShape) {
+        previewShape(event);
+      }
+    });
+
+    canvas.addEventListener("mouseup", function(event) {
+      if (selectDrag) {
+        finishSelectDrag();
+      } else if (isFreeDrawing) {
+        finishFreeDrawing(event);
+      } else if (isDrawingShape) {
+        finishShape(event);
+      }
+
+      selectedCircle = null;
+      isFreeDrawing = false;
+    });
+
+    function isTypingTarget(el) {
+      return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+    }
+
+    document.addEventListener('keydown', function(event) {
+      if (isTypingTarget(document.activeElement)) return;
+      if (event.ctrlKey && event.key === 'z') { undo(); }
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedShape) {
+        event.preventDefault();
+        var idx = paths.indexOf(selectedShape);
+        if (idx !== -1) paths.splice(idx, 1);
+        selectedShape = null;
+        updateToolUI();
+        drawPathsLayer();
+      }
+    });
+    var toolHotkeys = { n: 'noneCheckbox', d: 'drawCheckbox', r: 'rectCheckbox', c: 'circleCheckbox', l: 'lineCheckbox', t: 'textCheckbox', s: 'selectCheckbox', p: 'panZoomCheckbox' };
+    document.addEventListener('keydown', function(event) {
+      if (isTypingTarget(document.activeElement)) return;
+      const key = event.key.toLowerCase();
+      var targetId = toolHotkeys[key];
+      if (targetId) {
+        document.getElementById(targetId).checked = true;
+        document.querySelectorAll('.toggle-btn').forEach(label => label.classList.remove('active'));
+        document.querySelector('label[for="' + targetId + '"]').classList.add('active');
+        if (editingText) commitTextEditor();
+        if (getSelectedTool() !== 'select') { selectedShape = null; selectDrag = null; drawPathsLayer(); }
+        updateToolUI();
+      }
+    });
+
+    
+    function openModal() { document.getElementById('myModal').style.display = 'block'; }
+    function closeModal() { document.getElementById('myModal').style.display = 'none'; }
+    
+    // =====================================================
+    // FIELD & TEXTURE PACK (ball sprites)
+    // =====================================================
+    
+    // Base URL for texture images.
+    const baseUrl = "https://static.koalabeast.com";
+    
+    // Configuration for map rendering.
+    const configMap = { tileSize: 40, quadSize: 20 };
+
+    // Texture packs definition.
+    const textures ={"texturePacks":[{"name":"Classic","author":"LuckySpammer","url":"classic","tiles":"/textures/classic/tiles.png","speedpad":"/textures/classic/speedpad.png","speedpadRed":"/textures/classic/speedpadred.png","speedpadBlue":"/textures/classic/speedpadblue.png","portal":"/textures/classic/portal.png","portalRed":"/textures/classic/portalred.png","portalBlue":"/textures/classic/portalblue.png","splats":"/textures/classic/splats.png","popularity":3259028385,"popularityScore":"3259"},{"name":"Sniper Pack","author":"DOKE","url":"sniperpack","tiles":"/textures/sniperpack/tiles.png","speedpad":"/textures/sniperpack/speedpad.png","speedpadRed":"/textures/sniperpack/speedpadred.png","speedpadBlue":"/textures/sniperpack/speedpadblue.png","portal":"/textures/sniperpack/portal.png","portalRed":"/textures/sniperpack/portalred.png","portalBlue":"/textures/sniperpack/portalblue.png","splats":"/textures/sniperpack/splats.png","popularity":1437466820,"popularityScore":"1437"},{"name":"Muscle's Cup Gradients","author":"MuscleCups","url":"musclescupgradients","tiles":"/textures/musclescupgradients/tiles.png","speedpad":"/textures/musclescupgradients/speedpad.png","speedpadRed":"/textures/musclescupgradients/speedpadred.png","speedpadBlue":"/textures/musclescupgradients/speedpadblue.png","portal":"/textures/musclescupgradients/portal.png","portalRed":"/textures/musclescupgradients/portalred.png","portalBlue":"/textures/musclescupgradients/portalblue.png","splats":"/textures/musclescupgradients/splats.png","popularity":1436532153,"popularityScore":"1437"},{"name":"Coral Light","author":"MagicPigeon","url":"corallight","tiles":"/textures/corallight/tiles.png","speedpad":"/textures/corallight/speedpad.png","speedpadRed":"/textures/corallight/speedpadred.png","speedpadBlue":"/textures/corallight/speedpadblue.png","portal":"/textures/corallight/portal.png","portalRed":"/textures/corallight/portalred.png","portalBlue":"/textures/corallight/portalblue.png","splats":"/textures/corallight/splats.png","popularity":1161028272,"popularityScore":"1161"},{"name":"Muscle's Cup OG","author":"MuscleCups","url":"musclescupog","tiles":"/textures/musclescupog/tiles.png","speedpad":"/textures/musclescupog/speedpad.png","speedpadRed":"/textures/musclescupog/speedpadred.png","speedpadBlue":"/textures/musclescupog/speedpadblue.png","portal":"/textures/musclescupog/portal.png","portalRed":"/textures/musclescupog/portalred.png","portalBlue":"/textures/musclescupog/portalblue.png","splats":"/textures/musclescupog/splats.png","popularity":687443389,"popularityScore":"687"},{"name":"Coral","author":"MagicPigeon","url":"coral","tiles":"/textures/coral/tiles.png","speedpad":"/textures/coral/speedpad.png","speedpadRed":"/textures/coral/speedpadred.png","speedpadBlue":"/textures/coral/speedpadblue.png","portal":"/textures/coral/portal.png","portalRed":"/textures/coral/portalred.png","portalBlue":"/textures/coral/portalblue.png","splats":"/textures/coral/splats.png","popularity":457526831,"popularityScore":"458"},{"name":"MTBad","author":"mtbkr24","url":"mtbad","tiles":"/textures/mtbad/tiles.png","speedpad":"/textures/mtbad/speedpad.png","speedpadRed":"/textures/mtbad/speedpadred.png","speedpadBlue":"/textures/mtbad/speedpadblue.png","portal":"/textures/mtbad/portal.png","portalRed":"/textures/mtbad/portalred.png","portalBlue":"/textures/mtbad/portalblue.png","splats":"/textures/mtbad/splats.png","popularity":412084222,"popularityScore":"412"},{"name":"Flat","author":"why","url":"flat","tiles":"/textures/flat/tiles.png","speedpad":"/textures/flat/speedpad.png","speedpadRed":"/textures/flat/speedpadred.png","speedpadBlue":"/textures/flat/speedpadblue.png","portal":"/textures/flat/portal.png","portalRed":"/textures/flat/portalred.png","portalBlue":"/textures/flat/portalblue.png","splats":"/textures/flat/splats.png","popularity":401656196,"popularityScore":"402"},{"name":"MLTP Live","author":"Ron Spawnson","url":"mltplive","tiles":"/textures/mltplive/tiles.png","speedpad":"/textures/mltplive/speedpad.png","speedpadRed":"/textures/mltplive/speedpadred.png","speedpadBlue":"/textures/mltplive/speedpadblue.png","portal":"/textures/mltplive/portal.png","portalRed":"/textures/mltplive/portalred.png","portalBlue":"/textures/mltplive/portalblue.png","splats":"/textures/mltplive/splats.png","popularity":263983209,"popularityScore":"264"},{"name":"24K","author":"MagicPigeon","url":"24k","tiles":"/textures/24k/tiles.png","speedpad":"/textures/24k/speedpad.png","speedpadRed":"/textures/24k/speedpadred.png","speedpadBlue":"/textures/24k/speedpadblue.png","portal":"/textures/24k/portal.png","portalRed":"/textures/24k/portalred.png","portalBlue":"/textures/24k/portalblue.png","splats":"/textures/24k/splats.png","popularity":233605766,"popularityScore":"234"},{"name":"Precision Dark","author":"Peach Fuzz","url":"precisiondark","tiles":"/textures/precisiondark/tiles.png","speedpad":"/textures/precisiondark/speedpad.png","speedpadRed":"/textures/precisiondark/speedpadred.png","speedpadBlue":"/textures/precisiondark/speedpadblue.png","portal":"/textures/precisiondark/portal.png","portalRed":"/textures/precisiondark/portalred.png","portalBlue":"/textures/precisiondark/portalblue.png","splats":"/textures/precisiondark/splats.png","popularity":213202866,"popularityScore":"213"},{"name":"Plumb","author":"SuperTed","url":"plumb","tiles":"/textures/plumb/tiles.png","speedpad":"/textures/plumb/speedpad.png","speedpadRed":"/textures/plumb/speedpadred.png","speedpadBlue":"/textures/plumb/speedpadblue.png","portal":"/textures/plumb/portal.png","portalRed":"/textures/plumb/portalred.png","portalBlue":"/textures/plumb/portalblue.png","splats":"/textures/plumb/splats.png","popularity":192741223,"popularityScore":"193"},{"name":"Plique","author":"Despair","url":"plique","tiles":"/textures/plique/tiles.png","speedpad":"/textures/plique/speedpad.png","speedpadRed":"/textures/plique/speedpadred.png","speedpadBlue":"/textures/plique/speedpadblue.png","portal":"/textures/plique/portal.png","portalRed":"/textures/plique/portalred.png","portalBlue":"/textures/plique/portalblue.png","splats":"/textures/plique/splats.png","popularity":183995905,"popularityScore":"184"},{"name":"Isometric","author":"mtbkr24","url":"isometric","tiles":"/textures/isometric/tiles.png","speedpad":"/textures/isometric/speedpad.png","speedpadRed":"/textures/isometric/speedpadred.png","speedpadBlue":"/textures/isometric/speedpadblue.png","portal":"/textures/isometric/portal.png","portalRed":"/textures/isometric/portalred.png","portalBlue":"/textures/isometric/portalblue.png","splats":"/textures/isometric/splats.png","popularity":167044212,"popularityScore":"167"},{"name":"Sparkle","author":"MagicPigeon","url":"sparkle","tiles":"/textures/sparkle/tiles.png","speedpad":"/textures/sparkle/speedpad.png","speedpadRed":"/textures/sparkle/speedpadred.png","speedpadBlue":"/textures/sparkle/speedpadblue.png","portal":"/textures/sparkle/portal.png","portalRed":"/textures/sparkle/portalred.png","portalBlue":"/textures/sparkle/portalblue.png","splats":"/textures/sparkle/splats.png","popularity":166286098,"popularityScore":"166"},{"name":"CamsPP Dark","author":"Cam","url":"camsppdark","tiles":"/textures/camsppdark/tiles.png","speedpad":"/textures/camsppdark/speedpad.png","speedpadRed":"/textures/camsppdark/speedpadred.png","speedpadBlue":"/textures/camsppdark/speedpadblue.png","portal":"/textures/camsppdark/portal.png","portalRed":"/textures/camsppdark/portalred.png","portalBlue":"/textures/camsppdark/portalblue.png","splats":"/textures/camsppdark/splats.png","popularity":159743715,"popularityScore":"160"},{"name":"CamsPP Old","author":"Cam","url":"camsppold","tiles":"/textures/camsppold/tiles.png","speedpad":"/textures/camsppold/speedpad.png","speedpadRed":"/textures/camsppold/speedpadred.png","speedpadBlue":"/textures/camsppold/speedpadblue.png","portal":"/textures/camsppold/portal.png","portalRed":"/textures/camsppold/portalred.png","portalBlue":"/textures/camsppold/portalblue.png","splats":"/textures/camsppold/splats.png","popularity":157841341,"popularityScore":"158"},{"name":"CMYK","author":"MagicPigeon","url":"cmyk","tiles":"/textures/cmyk/tiles.png","speedpad":"/textures/cmyk/speedpad.png","speedpadRed":"/textures/cmyk/speedpadred.png","speedpadBlue":"/textures/cmyk/speedpadblue.png","portal":"/textures/cmyk/portal.png","portalRed":"/textures/cmyk/portalred.png","portalBlue":"/textures/cmyk/portalblue.png","splats":"/textures/cmyk/splats.png","popularity":144688179,"popularityScore":"145"},{"name":"CamsPP Light","author":"Cam","url":"camspplight","tiles":"/textures/camspplight/tiles.png","speedpad":"/textures/camspplight/speedpad.png","speedpadRed":"/textures/camspplight/speedpadred.png","speedpadBlue":"/textures/camspplight/speedpadblue.png","portal":"/textures/camspplight/portal.png","portalRed":"/textures/camspplight/portalred.png","portalBlue":"/textures/camspplight/portalblue.png","splats":"/textures/camspplight/splats.png","popularity":135009946,"popularityScore":"135"},{"name":"Electric","author":"Bug","url":"electric","tiles":"/textures/electric/tiles.png","speedpad":"/textures/electric/speedpad.png","speedpadRed":"/textures/electric/speedpadred.png","speedpadBlue":"/textures/electric/speedpadblue.png","portal":"/textures/electric/portal.png","portalRed":"/textures/electric/portalred.png","portalBlue":"/textures/electric/portalblue.png","splats":"/textures/electric/splats.png","popularity":127175831,"popularityScore":"127"},{"name":"Sketch+","author":"MagicPigeon","url":"sketch","tiles":"/textures/sketch/tiles.png","speedpad":"/textures/sketch/speedpad.png","speedpadRed":"/textures/sketch/speedpadred.png","speedpadBlue":"/textures/sketch/speedpadblue.png","portal":"/textures/sketch/portal.png","portalRed":"/textures/sketch/portalred.png","portalBlue":"/textures/sketch/portalblue.png","splats":"/textures/sketch/splats.png","popularity":126489052,"popularityScore":"126"},{"name":"Sharp","author":"MagicPigeon","url":"sharp","tiles":"/textures/sharp/tiles.png","speedpad":"/textures/sharp/speedpad.png","speedpadRed":"/textures/sharp/speedpadred.png","speedpadBlue":"/textures/sharp/speedpadblue.png","portal":"/textures/sharp/portal.png","portalRed":"/textures/sharp/portalred.png","portalBlue":"/textures/sharp/portalblue.png","splats":"/textures/sharp/splats.png","popularity":103226439,"popularityScore":"103"},{"name":"PastelPro","author":"SuperTed","url":"pastelpro","tiles":"/textures/pastelpro/tiles.png","speedpad":"/textures/pastelpro/speedpad.png","speedpadRed":"/textures/pastelpro/speedpadred.png","speedpadBlue":"/textures/pastelpro/speedpadblue.png","portal":"/textures/pastelpro/portal.png","portalRed":"/textures/pastelpro/portalred.png","portalBlue":"/textures/pastelpro/portalblue.png","splats":"/textures/pastelpro/splats.png","popularity":99507002,"popularityScore":"100"},{"name":"Element+","author":"MagicPigeon","url":"element","tiles":"/textures/element/tiles.png","speedpad":"/textures/element/speedpad.png","speedpadRed":"/textures/element/speedpadred.png","speedpadBlue":"/textures/element/speedpadblue.png","portal":"/textures/element/portal.png","portalRed":"/textures/element/portalred.png","portalBlue":"/textures/element/portalblue.png","splats":"/textures/element/splats.png","popularity":98019109,"popularityScore":"98"},{"name":"Mural","author":"DaEvil1","url":"mural","tiles":"/textures/mural/tiles.png","speedpad":"/textures/mural/speedpad.png","speedpadRed":"/textures/mural/speedpadred.png","speedpadBlue":"/textures/mural/speedpadblue.png","portal":"/textures/mural/portal.png","portalRed":"/textures/mural/portalred.png","portalBlue":"/textures/mural/portalblue.png","splats":"/textures/mural/splats.png","popularity":80387834,"popularityScore":"80"},{"name":"Supreme","author":"bicycle","url":"supreme","tiles":"/textures/supreme/tiles.png","speedpad":"/textures/supreme/speedpad.png","speedpadRed":"/textures/supreme/speedpadred.png","speedpadBlue":"/textures/supreme/speedpadblue.png","portal":"/textures/supreme/portal.png","portalRed":"/textures/supreme/portalred.png","portalBlue":"/textures/supreme/portalblue.png","splats":"/textures/supreme/splats.png","popularity":69068153,"popularityScore":"69"},{"name":"Circlejerk","author":"Bizkut and Ion","url":"circlejerk","tiles":"/textures/circlejerk/tiles.png","speedpad":"/textures/circlejerk/speedpad.png","speedpadRed":"/textures/circlejerk/speedpadred.png","speedpadBlue":"/textures/circlejerk/speedpadblue.png","portal":"/textures/circlejerk/portal.png","portalRed":"/textures/circlejerk/portalred.png","portalBlue":"/textures/circlejerk/portalblue.png","splats":"/textures/circlejerk/splats.png","popularity":68828720,"popularityScore":"69"},{"name":"nom","author":"anom","url":"nom","tiles":"/textures/nom/tiles.png","speedpad":"/textures/nom/speedpad.png","speedpadRed":"/textures/nom/speedpadred.png","speedpadBlue":"/textures/nom/speedpadblue.png","portal":"/textures/nom/portal.png","portalRed":"/textures/nom/portalred.png","portalBlue":"/textures/nom/portalblue.png","splats":"/textures/nom/splats.png","popularity":58222444,"popularityScore":"58"},{"name":"Starlight","author":"MagicPigeon","url":"starlight","tiles":"/textures/starlight/tiles.png","speedpad":"/textures/starlight/speedpad.png","speedpadRed":"/textures/starlight/speedpadred.png","speedpadBlue":"/textures/starlight/speedpadblue.png","portal":"/textures/starlight/portal.png","portalRed":"/textures/starlight/portalred.png","portalBlue":"/textures/starlight/portalblue.png","splats":"/textures/starlight/splats.png","popularity":54456391,"popularityScore":"54"},{"name":"TerminalPX","author":"pooppants","url":"terminalpx","tiles":"/textures/terminalpx/tiles.png","speedpad":"/textures/terminalpx/speedpad.png","speedpadRed":"/textures/terminalpx/speedpadred.png","speedpadBlue":"/textures/terminalpx/speedpadblue.png","portal":"/textures/terminalpx/portal.png","portalRed":"/textures/terminalpx/portalred.png","portalBlue":"/textures/terminalpx/portalblue.png","splats":"/textures/terminalpx/splats.png","popularity":49589262,"popularityScore":"50"},{"name":"Brioche Light","author":"Brioche","url":"briochelight","tiles":"/textures/briochelight/tiles.png","speedpad":"/textures/briochelight/speedpad.png","speedpadRed":"/textures/briochelight/speedpadred.png","speedpadBlue":"/textures/briochelight/speedpadblue.png","portal":"/textures/briochelight/portal.png","portalRed":"/textures/briochelight/portalred.png","portalBlue":"/textures/briochelight/portalblue.png","splats":"/textures/briochelight/splats.png","popularity":46374492,"popularityScore":"46"},{"name":"Crystal","author":"MagicPigeon","url":"crystal","tiles":"/textures/crystal/tiles.png","speedpad":"/textures/crystal/speedpad.png","speedpadRed":"/textures/crystal/speedpadred.png","speedpadBlue":"/textures/crystal/speedpadblue.png","portal":"/textures/crystal/portal.png","portalRed":"/textures/crystal/portalred.png","portalBlue":"/textures/crystal/portalblue.png","splats":"/textures/crystal/splats.png","popularity":41009434,"popularityScore":"41"},{"name":"Bold","author":"MagicPigeon","url":"bold","tiles":"/textures/bold/tiles.png","speedpad":"/textures/bold/speedpad.png","speedpadRed":"/textures/bold/speedpadred.png","speedpadBlue":"/textures/bold/speedpadblue.png","portal":"/textures/bold/portal.png","portalRed":"/textures/bold/portalred.png","portalBlue":"/textures/bold/portalblue.png","splats":"/textures/bold/splats.png","popularity":35898990,"popularityScore":"36"},{"name":"Turbo","author":"Ooops","url":"turbo","tiles":"/textures/turbo/tiles.png","speedpad":"/textures/turbo/speedpad.png","speedpadRed":"/textures/turbo/speedpadred.png","speedpadBlue":"/textures/turbo/speedpadblue.png","portal":"/textures/turbo/portal.png","portalRed":"/textures/turbo/portalred.png","portalBlue":"/textures/turbo/portalblue.png","splats":"/textures/turbo/splats.png","popularity":35092795,"popularityScore":"35"},{"name":"Granata","author":"_Coffee_","url":"granata","tiles":"/textures/granata/tiles.png","speedpad":"/textures/granata/speedpad.png","speedpadRed":"/textures/granata/speedpadred.png","speedpadBlue":"/textures/granata/speedpadblue.png","portal":"/textures/granata/portal.png","portalRed":"/textures/granata/portalred.png","portalBlue":"/textures/granata/portalblue.png","splats":"/textures/granata/splats.png","popularity":32450816,"popularityScore":"32"},{"name":"Celeste","author":"MagicPigeon","url":"celeste","tiles":"/textures/celeste/tiles.png","speedpad":"/textures/celeste/speedpad.png","speedpadRed":"/textures/celeste/speedpadred.png","speedpadBlue":"/textures/celeste/speedpadblue.png","portal":"/textures/celeste/portal.png","portalRed":"/textures/celeste/portalred.png","portalBlue":"/textures/celeste/portalblue.png","splats":"/textures/celeste/splats.png","popularity":30547603,"popularityScore":"31"},{"name":"Brioche Deluxe","author":"Bumballbee and Brioche","url":"briochedeluxe","tiles":"/textures/briochedeluxe/tiles.png","speedpad":"/textures/briochedeluxe/speedpad.png","speedpadRed":"/textures/briochedeluxe/speedpadred.png","speedpadBlue":"/textures/briochedeluxe/speedpadblue.png","portal":"/textures/briochedeluxe/portal.png","portalRed":"/textures/briochedeluxe/portalred.png","portalBlue":"/textures/briochedeluxe/portalblue.png","splats":"/textures/briochedeluxe/splats.png","popularity":29724638,"popularityScore":"30"},{"name":"Brioche Extra Light","author":"Brioche","url":"briocheextralight","tiles":"/textures/briocheextralight/tiles.png","speedpad":"/textures/briocheextralight/speedpad.png","speedpadRed":"/textures/briocheextralight/speedpadred.png","speedpadBlue":"/textures/briocheextralight/speedpadblue.png","portal":"/textures/briocheextralight/portal.png","portalRed":"/textures/briocheextralight/portalred.png","portalBlue":"/textures/briocheextralight/portalblue.png","splats":"/textures/briocheextralight/splats.png","popularity":28923330,"popularityScore":"29"},{"name":"TagPro Next Classic","author":"KoalaBeast, MagicPigeon, Ronding","url":"tagpronextclassic","tiles":"/textures/tagpronextclassic/tiles.png","speedpad":"/textures/tagpronextclassic/speedpad.png","speedpadRed":"/textures/tagpronextclassic/speedpadred.png","speedpadBlue":"/textures/tagpronextclassic/speedpadblue.png","portal":"/textures/tagpronextclassic/portal.png","portalRed":"/textures/tagpronextclassic/portalred.png","portalBlue":"/textures/tagpronextclassic/portalblue.png","splats":"/textures/tagpronextclassic/splats.png","popularity":27984534,"popularityScore":"28"},{"name":"Flat (Bug)","author":"Bug","url":"flatbug","tiles":"/textures/flatbug/tiles.png","speedpad":"/textures/flatbug/speedpad.png","speedpadRed":"/textures/flatbug/speedpadred.png","speedpadBlue":"/textures/flatbug/speedpadblue.png","portal":"/textures/flatbug/portal.png","portalRed":"/textures/flatbug/portalred.png","portalBlue":"/textures/flatbug/portalblue.png","splats":"/textures/flatbug/splats.png","popularity":24945237,"popularityScore":"25"},{"name":"Maxima","author":"MagicPigeon","url":"maxima","tiles":"/textures/maxima/tiles.png","speedpad":"/textures/maxima/speedpad.png","speedpadRed":"/textures/maxima/speedpadred.png","speedpadBlue":"/textures/maxima/speedpadblue.png","portal":"/textures/maxima/portal.png","portalRed":"/textures/maxima/portalred.png","portalBlue":"/textures/maxima/portalblue.png","splats":"/textures/maxima/splats.png","popularity":24314189,"popularityScore":"24"},{"name":"Jello","author":"MC Ride","url":"jello","tiles":"/textures/jello/tiles.png","speedpad":"/textures/jello/speedpad.png","speedpadRed":"/textures/jello/speedpadred.png","speedpadBlue":"/textures/jello/speedpadblue.png","portal":"/textures/jello/portal.png","portalRed":"/textures/jello/portalred.png","portalBlue":"/textures/jello/portalblue.png","splats":"/textures/jello/splats.png","popularity":19824774,"popularityScore":"20"},{"name":"Chip","author":"anom","url":"chip","tiles":"/textures/chip/tiles.png","speedpad":"/textures/chip/speedpad.png","speedpadRed":"/textures/chip/speedpadred.png","speedpadBlue":"/textures/chip/speedpadblue.png","portal":"/textures/chip/portal.png","portalRed":"/textures/chip/portalred.png","portalBlue":"/textures/chip/portalblue.png","splats":"/textures/chip/splats.png","popularity":17452655,"popularityScore":"17"},{"name":"Wave","author":"Waterwheel","url":"wave","tiles":"/textures/wave/tiles.png","speedpad":"/textures/wave/speedpad.png","speedpadRed":"/textures/wave/speedpadred.png","speedpadBlue":"/textures/wave/speedpadblue.png","portal":"/textures/wave/portal.png","portalRed":"/textures/wave/portalred.png","portalBlue":"/textures/wave/portalblue.png","splats":"/textures/wave/splats.png","popularity":16795172,"popularityScore":"17"},{"name":"Mumbo","author":"MagicPigeon","url":"mumbo","tiles":"/textures/mumbo/tiles.png","speedpad":"/textures/mumbo/speedpad.png","speedpadRed":"/textures/mumbo/speedpadred.png","speedpadBlue":"/textures/mumbo/speedpadblue.png","portal":"/textures/mumbo/portal.png","portalRed":"/textures/mumbo/portalred.png","portalBlue":"/textures/mumbo/portalblue.png","splats":"/textures/mumbo/splats.png","popularity":14947784,"popularityScore":"15"},{"name":"Funko","author":"MC Ride","url":"funko","tiles":"/textures/funko/tiles.png","speedpad":"/textures/funko/speedpad.png","speedpadRed":"/textures/funko/speedpadred.png","speedpadBlue":"/textures/funko/speedpadblue.png","portal":"/textures/funko/portal.png","portalRed":"/textures/funko/portalred.png","portalBlue":"/textures/funko/portalblue.png","splats":"/textures/funko/splats.png","popularity":7612965,"popularityScore":"8"},{"name":"Ancient Gems","author":"Flaccid Trip ft. jazzz","url":"ancientgems","tiles":"/textures/ancientgems/tiles.png","speedpad":"/textures/ancientgems/speedpad.png","speedpadRed":"/textures/ancientgems/speedpadred.png","speedpadBlue":"/textures/ancientgems/speedpadblue.png","portal":"/textures/ancientgems/portal.png","portalRed":"/textures/ancientgems/portalred.png","portalBlue":"/textures/ancientgems/portalblue.png","splats":"/textures/ancientgems/splats.png","popularity":5546128,"popularityScore":"6"},{"name":"Yin & Yang","author":"_Coffee_","url":"yinyang","tiles":"/textures/yinyang/tiles.png","speedpad":"/textures/yinyang/speedpad.png","speedpadRed":"/textures/yinyang/speedpadred.png","speedpadBlue":"/textures/yinyang/speedpadblue.png","portal":"/textures/yinyang/portal.png","portalRed":"/textures/yinyang/portalred.png","portalBlue":"/textures/yinyang/portalblue.png","splats":"/textures/yinyang/splats.png","popularity":5255750,"popularityScore":"5"},{"name":"Spongepack","author":"_Coffee_","url":"spongepack","tiles":"/textures/spongepack/tiles.png","speedpad":"/textures/spongepack/speedpad.png","speedpadRed":"/textures/spongepack/speedpadred.png","speedpadBlue":"/textures/spongepack/speedpadblue.png","portal":"/textures/spongepack/portal.png","portalRed":"/textures/spongepack/portalred.png","portalBlue":"/textures/spongepack/portalblue.png","splats":"/textures/spongepack/splats.png","popularity":5125995,"popularityScore":"5"},{"name":"Xmas","author":"jazzz","url":"xmas","tiles":"/textures/xmas/tiles.png","speedpad":"/textures/xmas/speedpad.png","speedpadRed":"/textures/xmas/speedpadred.png","speedpadBlue":"/textures/xmas/speedpadblue.png","portal":"/textures/xmas/portal.png","portalRed":"/textures/xmas/portalred.png","portalBlue":"/textures/xmas/portalblue.png","splats":"/textures/xmas/splats.png","popularity":3897718,"popularityScore":"4"},{"name":"Afloat","author":"Pingu","url":"afloat","tiles":"/textures/afloat/tiles.png","speedpad":"/textures/afloat/speedpad.png","speedpadRed":"/textures/afloat/speedpadred.png","speedpadBlue":"/textures/afloat/speedpadblue.png","portal":"/textures/afloat/portal.png","portalRed":"/textures/afloat/portalred.png","portalBlue":"/textures/afloat/portalblue.png","splats":"/textures/afloat/splats.png","popularity":2873024,"popularityScore":"3"},{"name":"Twine","author":"Flaccid Trip","url":"twine","tiles":"/textures/twine/tiles.png","speedpad":"/textures/twine/speedpad.png","speedpadRed":"/textures/twine/speedpadred.png","speedpadBlue":"/textures/twine/speedpadblue.png","portal":"/textures/twine/portal.png","portalRed":"/textures/twine/portalred.png","portalBlue":"/textures/twine/portalblue.png","splats":"/textures/twine/splats.png","popularity":2340488,"popularityScore":"2"},{"name":"Bowling","author":"_Coffee_","url":"bowling","tiles":"/textures/bowling/tiles.png","speedpad":"/textures/bowling/speedpad.png","speedpadRed":"/textures/bowling/speedpadred.png","speedpadBlue":"/textures/bowling/speedpadblue.png","portal":"/textures/bowling/portal.png","portalRed":"/textures/bowling/portalred.png","portalBlue":"/textures/bowling/portalblue.png","splats":"/textures/bowling/splats.png","popularity":913939,"popularityScore":"1"},{"name":"Supreme Shine","author":"Flaccid Trip","url":"supremeshine","tiles":"/textures/supremeshine/tiles.png","speedpad":"/textures/supremeshine/speedpad.png","speedpadRed":"/textures/supremeshine/speedpadred.png","speedpadBlue":"/textures/supremeshine/speedpadblue.png","portal":"/textures/supremeshine/portal.png","portalRed":"/textures/supremeshine/portalred.png","portalBlue":"/textures/supremeshine/portalblue.png","splats":"/textures/supremeshine/splats.png","popularity":696670,"popularityScore":"1"},{"name":"Softpaint","author":"Xcissors ft. anom","url":"softpaint","tiles":"/textures/softpaint/tiles.png","speedpad":"/textures/softpaint/speedpad.png","speedpadRed":"/textures/softpaint/speedpadred.png","speedpadBlue":"/textures/softpaint/speedpadblue.png","portal":"/textures/softpaint/portal.png","portalRed":"/textures/softpaint/portalred.png","portalBlue":"/textures/softpaint/portalblue.png","splats":"/textures/softpaint/splats.png","popularity":618115,"popularityScore":"1"},{"name":"Return","author":"Flaccid Trip","url":"return","tiles":"/textures/return/tiles.png","speedpad":"/textures/return/speedpad.png","speedpadRed":"/textures/return/speedpadred.png","speedpadBlue":"/textures/return/speedpadblue.png","portal":"/textures/return/portal.png","portalRed":"/textures/return/portalred.png","portalBlue":"/textures/return/portalblue.png","splats":"/textures/return/splats.png","popularity":149148,"popularityScore":"0"}]}
+
+    // Global images for textures - only the tile sheet is needed here, for
+    // the ball sprites and powerup pad icons.
+    var images = {
+      tile: null
+    };
+    
+    
+    // Set current texture pack from localStorage if available.
+    var currentTexturePack = textures.texturePacks[0];
+    var savedTexture = localStorage.getItem('fm_selected_texturePack');
+    if (savedTexture) {
+      var found = textures.texturePacks.find(tp => tp.url === savedTexture);
+      if(found){
+        currentTexturePack = found;
+        console.log("[Strateggy] Loaded saved texture pack:", currentTexturePack.name);
+      }
+    }
+
+    // loadImage prepends baseUrl if needed.
+    var imageCache = {};
+    function loadImage(url) {
+      if (url.startsWith("/")) { url = baseUrl + url; }
+      if (imageCache[url]) { return imageCache[url]; }
+      var promise = new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          console.log("[Strateggy] Loaded image:", url);
+          resolve(img);
+        };
+        img.onerror = (e) => {
+          console.error("[Strateggy] Error loading image:", url, e);
+          delete imageCache[url];
+          reject(e);
+        };
+        img.src = url;
+      });
+      imageCache[url] = promise;
+      return promise;
+    }
+
+    // Loads the texture pack's tile sheet (ball sprites, powerup icons) and
+    // redraws the balls with it.
+    function loadTextures() {
+      return loadImage(currentTexturePack.tiles).then(function(tileImg) {
+        images.tile = tileImg;
+        renderBallIcons();
+        renderPropIcons();
+        drawPathsLayer();
+      }).catch(function(err) {
+        console.error("[Strateggy] Error loading texture pack", err);
+        alert("Failed to load texture pack images.");
+      });
+    }
+
+    // Loads field.png as the background, with a blank drawable margin
+    // around it, then fits the view to it.
+    function loadField() {
+      showLoading('Loading field...');
+      // Plain same-origin load (no crossOrigin flag, unlike loadImage's
+      // remote texture fetches) so this also works when opened from disk.
+      return new Promise(function(resolve, reject) {
+        var img = new Image();
+        img.onload = function() { resolve(img); };
+        img.onerror = reject;
+        img.src = 'field.png';
+      }).then(function(img) {
+        finalMapImage = img;
+        canvas.width = img.width + MAP_MARGIN * 2;
+        canvas.height = img.height + MAP_MARGIN * 2;
+        pathsCanvas.width = canvas.width;
+        pathsCanvas.height = canvas.height;
+        mapOffsetX = MAP_MARGIN;
+        mapOffsetY = MAP_MARGIN;
+        drawCanvas();
+        fitToScreen();
+      }).catch(function(err) {
+        console.error("[Strateggy] Error loading field", err);
+        alert("Failed to load the field image.");
+      }).finally(hideLoading);
+    }
+    // =====================================================
+    // TEXTURE PACK DROPDOWN UI
+    // =====================================================
+ function addTextureDropdown() {
+  const container = document.querySelector('.files-left');
+  if (!container) {
+    console.error("Texture dropdown container not found");
+    return;
   }
+  
+  // Build the dropdown HTML.
+  // Setting display: inline-block so that it appears on the same line.
+  const textureContainerHTML = `
+    <div id="fm-texture-dropdown" style="display: inline-block;">
+      <button id="fm-dropdown-button" style="padding: 8px 12px; font-size: 16px; cursor: pointer;">
+        ${currentTexturePack.name}
+      </button>
+      <div id="fm-dropdown-menu" style="display: none; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 200px; overflow-y: auto; padding: 0.5rem; position: absolute;">
+        <div id="fm-dropdown-search-container" style="padding: 0.5rem;">
+          <input type="text" id="fm-dropdown-search" placeholder="Search Texture Packs..." style="width: 100%; padding: 4px;">
+        </div>
+        <div id="fm-dropdown-items">
+          ${textures.texturePacks.map(tp => `
+            <div class="dropdown-item" data-value="${tp.url}" style="padding: 4px 8px; cursor: pointer;">
+              ${tp.name}
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Append the dropdown HTML without replacing the existing content.
+  container.insertAdjacentHTML('beforeend', textureContainerHTML);
+  
+  // Toggle dropdown visibility when button is clicked.
+  const button = document.getElementById('fm-dropdown-button');
+  const menu = document.getElementById('fm-dropdown-menu');
+  button.addEventListener('click', function(e) {
+    menu.style.display = (menu.style.display === "none" || menu.style.display === "") ? "block" : "none";
+    e.stopPropagation(); // Prevent click from bubbling up.
+  });
+  
+  // Hide the menu if user clicks outside.
+  document.addEventListener('click', function() {
+    menu.style.display = "none";
+  });
+  
+  // Prevent closing the menu when clicking inside it.
+  menu.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+  
+  // Filter items based on search input.
+  const searchInput = document.getElementById('fm-dropdown-search');
+  searchInput.addEventListener('input', function() {
+    const query = this.value.toLowerCase();
+    const items = document.querySelectorAll('#fm-dropdown-items .dropdown-item');
+    items.forEach(item => {
+      const text = item.textContent.toLowerCase();
+      item.style.display = text.includes(query) ? "block" : "none";
+    });
+  });
+  
+  // Set up click events for each texture pack item.
+  const items = document.querySelectorAll('#fm-dropdown-items .dropdown-item');
+  items.forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const selectedUrl = this.getAttribute('data-value');
+      const selectedTexture = textures.texturePacks.find(tp => tp.url === selectedUrl);
+      if (selectedTexture && selectedTexture.url !== currentTexturePack.url) {
+        currentTexturePack = selectedTexture;
+        localStorage.setItem('fm_selected_texturePack', selectedTexture.url);
+        console.log("Texture pack changed to:", selectedTexture.name);
+        // Update the button text.
+        button.textContent = selectedTexture.name;
+        showLoading('Loading texture pack...');
+        loadTextures().finally(hideLoading);
+      }
+      // Hide the menu after selection.
+      menu.style.display = "none";
+    });
+  });
 }
-
-        canvas.addEventListener("mousedown", function(event) {
-            if (event.button === 0) {
-                selectCircle(event);
-                if (document.getElementById("drawCheckbox").checked)
-                    isDrawing = true;
-                getStart(event);
-            }
-        });
-
-        canvas.addEventListener("mousemove", function(event) {
-            moveCircle(event);
-            if (isDrawing)
-                drawLine(event);
-        });
-
-        canvas.addEventListener("mouseup", function(event) {
-            selectedCircle = null;
-            isDrawing = false;
-        });
-
-var isDrawingLine = false;
-        var lineStartX = 0;
-        var lineStartY = 0;
-
-        function startDrawingLine(event) {
-            if (event.button === 0 && document.getElementById("lineCheckbox").checked) {
-                isDrawingLine = true;
-                lineStartX = event.clientX - canvas.offsetLeft;
-                lineStartY = event.clientY - canvas.offsetTop;
-            }
-        }
-
-        function drawLinePreview(event) {
-            if (isDrawingLine) {
-                var rect = canvas.getBoundingClientRect();
-                var lineEndX = event.clientX - rect.left;
-                var lineEndY = event.clientY - rect.top;
-
-                // Clear the canvas
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // Redraw the balls
-                drawCircles();
-
-                // Redraw the existing paths
-                drawPaths();
-
-                // Draw the preview line
-                ctx.beginPath();
-                ctx.moveTo(lineStartX, lineStartY);
-                ctx.lineTo(lineEndX, lineEndY);
-                ctx.strokeStyle = pathColor;
-                ctx.lineWidth = pathSize;
-                ctx.stroke();
-            }
-        }
-
-        function finishDrawingLine(event) {
-            if (isDrawingLine) {
-                isDrawingLine = false;
-                var lineEndX = event.clientX - canvas.offsetLeft;
-                var lineEndY = event.clientY - canvas.offsetTop;
-
-                // Create a new path for the line
-                var path = {
-                    path: new Path2D(),
-                    color: pathColor,
-                    size: pathSize
-                };
-                path.path.moveTo(lineStartX, lineStartY);
-                path.path.lineTo(lineEndX, lineEndY);
-                paths.push(path);
-
-                // Clear the canvas
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                // Redraw the balls
-                drawCircles();
-
-                // Redraw all paths
-                drawPaths();
-            }
-        }
-
-        canvas.addEventListener("mousedown", startDrawingLine);
-        canvas.addEventListener("mousemove", drawLinePreview);
-        canvas.addEventListener("mouseup", finishDrawingLine);
-document.addEventListener("keydown", function(event) {
-  // Check if the Ctrl key and Z key are pressed simultaneously
-  if (event.ctrlKey && event.key === "z") {
-    // Run the undo command here
-    undo();
-  }
+window.addEventListener("DOMContentLoaded", function() {
+  addTextureDropdown();
+  renderBallIcons();
+  fitToScreen();
+  loadField();
+  loadTextures();
 });
 
 
-    </script>
+// Keeps the Add Color button's own background in sync with whatever color
+// is currently picked, so it previews what you're about to add instead of
+// staying a flat gray regardless of the picker's value.
+const colorAddButton = document.getElementById("colorAdd");
+const colorInputForAddButton = document.getElementById("colorInput");
+function syncColorAddButton() {
+  colorAddButton.style.backgroundColor = colorInputForAddButton.value;
+}
+colorInputForAddButton.addEventListener("input", syncColorAddButton);
+syncColorAddButton();
+
+// Loads whatever was last saved via the palette editor's "Save to Cache"
+// button, if anything - otherwise the hardcoded defaults in paletteColors
+// stand. Either way, #colors starts empty (see the palette editor HTML
+// change) and needs this to actually populate it.
+(function loadCachedPaletteColors() {
+  var cached = localStorage.getItem(CUSTOM_COLORS_CACHE_KEY);
+  if (cached) {
+    try { paletteColors = JSON.parse(cached); } catch (e) { /* fall back to defaults */ }
+  }
+  renderPaletteColors();
+})();
+
+document.getElementById('paletteJsonTextbox').addEventListener('input', applyPaletteJsonFromTextarea);
+document.getElementById('paletteUploadInput').addEventListener('change', uploadPaletteJson);
+
+const eggCheckbox        = document.getElementById("eggCheckbox");
+const jukeCheckbox       = document.getElementById("jukeCheckbox");
+const bombCheckbox       = document.getElementById("bombCheckbox");
+const tagproCheckbox     = document.getElementById("tagproCheckbox");
+
+    eggCheckbox.addEventListener("change", function() { eggEnabled = eggCheckbox.checked; });
+    jukeCheckbox.addEventListener("change", function() { jukeEnabled = jukeCheckbox.checked; });
+    bombCheckbox.addEventListener("change", function() { bombEnabled = bombCheckbox.checked; });
+    tagproCheckbox.addEventListener("change", function() { tagproEnabled = tagproCheckbox.checked; });
+    
+    // =====================================================
+    // End Integration
+    // =====================================================
+  </script>
 </body>
 </html>
-Right Click to Erase. You can zoom out also.
