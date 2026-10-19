@@ -772,7 +772,8 @@ input[type="checkbox"]:checked::after {
         <p>Ctrl+Z to undo</p>
         <p>Right Click to Erase Balls / the Egg</p>
         <p>Right Click a Text Box to Edit It</p>
-        <p>Shift+Right Click a Ball to Set Egg/JJ/RB/TP</p>
+        <p>Drag the Egg Onto a Ball to Pick It Up</p>
+        <p>Shift+Right Click a Ball to Give/Drop the Egg or Set JJ/RB/TP</p>
         <p><a href="https://github.com/BambiTP/Strateggy">Github</a></p>
         <p><a href="https://bambitp.github.io/StraTAGy/">StraTAGy</a> (same tools, for any Fortunate Maps map)</p>
         <button id="paletteToggleButton" onclick="togglePaletteEditor()">Palette</button>
@@ -1270,23 +1271,58 @@ input[type="checkbox"]:checked::after {
       drawBackgroundLayer();
       drawPathsLayer();
     }
-    function addCircle(color, withEgg, withJuke, withBomb, withTagpro) {
-  // Choose a random position within the field's own bounds (not the
-  // blank MAP_MARGIN drawing area around it) - falls back to the whole
-  // canvas if the field hasn't loaded yet.
+    // A random 40px-tile position within the board's own bounds (not the
+    // blank MAP_MARGIN drawing area around it) - falls back to the whole
+    // canvas if the field hasn't loaded yet.
+    function randomBoardPosition() {
   var minX = finalMapImage ? mapOffsetX : 0;
   var minY = finalMapImage ? mapOffsetY : 0;
   var spanX = Math.max(1, (finalMapImage ? finalMapImage.width  : canvas.width)  - 40);
   var spanY = Math.max(1, (finalMapImage ? finalMapImage.height : canvas.height) - 40);
-  var x = minX + Math.floor(Math.random() * spanX);
-  var y = minY + Math.floor(Math.random() * spanY);
+  return { x: minX + Math.floor(Math.random() * spanX), y: minY + Math.floor(Math.random() * spanY) };
+}
+
+    function addCircle(color, withEgg, withJuke, withBomb, withTagpro) {
+  var pos = randomBoardPosition();
   var tileObj = {
-    x: x, y: y, color: color,
-    hasEgg: withEgg,
+    x: pos.x, y: pos.y, color: color,
     hasJuke: withJuke, hasBomb: withBomb, hasTagpro: withTagpro,
   };
   circles.push(tileObj);
+  if (withEgg) {
+    takeEgg(tileObj);
+    // There's only one egg, so the "new ball carries it" toggle is used up.
+    eggCheckbox.checked = false;
+    eggEnabled = false;
+  }
   drawPathsLayer();
+}
+
+// There's only ever one egg in play - either loose on the field (a circles
+// entry with color "egg") or carried by one ball (hasEgg). These keep it
+// that way.
+function removeAllEggs() {
+  circles = circles.filter(function(c) { return c.color !== "egg"; });
+  circles.forEach(function(c) { c.hasEgg = false; });
+}
+
+function takeEgg(ball) {
+  removeAllEggs();
+  ball.hasEgg = true;
+}
+
+// Carrier lets go: the egg drops loose right next to the ball.
+function dropEgg(ball) {
+  ball.hasEgg = false;
+  circles.push({ x: ball.x + 40, y: ball.y, color: "egg" });
+}
+
+// Dropping the dragged loose egg onto a ball hands it to that ball.
+function pickUpEggIfOnBall(egg) {
+  var ball = circles.find(function(c) {
+    return c.color !== "egg" && Math.hypot(c.x - egg.x, c.y - egg.y) < 38;
+  });
+  if (ball) { takeEgg(ball); drawPathsLayer(); }
 }
 
 function drawCircle(tileObj) {
@@ -1323,10 +1359,10 @@ function drawCircle(tileObj) {
     config.tileSize, config.tileSize  // Destination width & height.
   );
 
-  // Carried egg - a smaller egg tucked against the ball's top-right, in
-  // roughly the spot StraTAGy draws a carried flag.
+  // Carried egg - a smaller yellow dot in the middle of the ball, so the
+  // team color still shows around it.
   if (tileObj.hasEgg) {
-    drawEggSprite(ctx, tileObj.x + 22, tileObj.y - 8, 26);
+    drawEggSprite(ctx, tileObj.x + 10, tileObj.y + 10, 20);
   }
 
   // Powerup indicators (set via the shift+right-click ball properties
@@ -1385,15 +1421,12 @@ function drawBlueCircle() {
   addCircle("blue", eggEnabled, jukeEnabled, bombEnabled, tagproEnabled);
 }
 
-// Loose egg - dropped at the center of the board (the 50 yard line on the
-// full field) rather than a random spot like a ball, nudged a little if
-// one is already sitting there.
+// Loose egg - a random spot like a ball. Replaces the existing egg
+// (loose or carried), since there's only one.
 function drawEgg() {
-  var cx = finalMapImage ? mapOffsetX + finalMapImage.width / 2 : canvas.width / 2;
-  var cy = finalMapImage ? mapOffsetY + finalMapImage.height / 2 : canvas.height / 2;
-  var x = cx - 20, y = cy - 20;
-  while (circles.some(function(c) { return c.x === x && c.y === y; })) { x += 12; y += 12; }
-  circles.push({ x: x, y: y, color: "egg" });
+  removeAllEggs();
+  var pos = randomBoardPosition();
+  circles.push({ x: pos.x, y: pos.y, color: "egg" });
   drawPathsLayer();
 }
 
@@ -1857,7 +1890,6 @@ function renderPropIcons() {
     var ballPropsTarget = null; // the circle object the open menu edits
 
     var BALL_PROP_TOGGLES = [
-      { id: 'ballPropEgg',        key: 'hasEgg' },
       { id: 'ballPropJuke',       key: 'hasJuke' },
       { id: 'ballPropBomb',       key: 'hasBomb' },
       { id: 'ballPropTagpro',     key: 'hasTagpro' },
@@ -1865,6 +1897,7 @@ function renderPropIcons() {
 
     function refreshBallPropsMenu() {
       if (!ballPropsTarget) return;
+      document.getElementById('ballPropEgg').classList.toggle('on', !!ballPropsTarget.hasEgg);
       BALL_PROP_TOGGLES.forEach(function(prop) {
         var btn = document.getElementById(prop.id);
         var on = !!ballPropsTarget[prop.key];
@@ -1884,6 +1917,16 @@ function renderPropIcons() {
       ballPropsTarget = null;
       ballPropsMenuEl.style.display = 'none';
     }
+
+    // The egg isn't a plain per-ball boolean - giving it to this ball takes
+    // it from wherever it was, and taking it away drops it loose.
+    document.getElementById('ballPropEgg').addEventListener('click', function() {
+      if (!ballPropsTarget) return;
+      if (ballPropsTarget.hasEgg) dropEgg(ballPropsTarget);
+      else takeEgg(ballPropsTarget);
+      refreshBallPropsMenu();
+      drawPathsLayer();
+    });
 
     BALL_PROP_TOGGLES.forEach(function(prop) {
       document.getElementById(prop.id).addEventListener('click', function() {
@@ -2386,6 +2429,8 @@ function undo() {
         finishFreeDrawing(event);
       } else if (isDrawingShape) {
         finishShape(event);
+      } else if (selectedCircle && selectedCircle.color === "egg") {
+        pickUpEggIfOnBall(selectedCircle);
       }
 
       selectedCircle = null;
